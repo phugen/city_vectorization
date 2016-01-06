@@ -20,7 +20,7 @@ int main (int argc, char** argv)
     //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/peter.png", CV_LOAD_IMAGE_COLOR);
     original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/jointest.png", CV_LOAD_IMAGE_COLOR);
 
-    // output matrix will be binary (use uchar instead of Vec3b)
+    // output matrix will be unsigned 8-bit (use uchar instead of Vec3b)
     output = new Mat(original.rows, original.cols, CV_8U);
 
     // BGR format
@@ -32,5 +32,13 @@ int main (int argc, char** argv)
     getBlackLayer(thresholds, original, output);
     unionFindComponents(*output, &components);
     areaFilter(*output, &components, 10);
-    collinearGrouping(*output, &components);
+    //collinearGrouping(*output, &components);
+
+    for(vector<ConnectedComponent>::iterator c = components.begin(); c != components.end(); c++)
+        eraseComponentPixels(*c, output);
+
+    namedWindow("ERASED", WINDOW_AUTOSIZE);
+    imshow("ERASED", *output);
+
+    waitKey(0);
 }

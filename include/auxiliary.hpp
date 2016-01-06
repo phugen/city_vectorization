@@ -4,10 +4,14 @@
 #include <vector>
 
 #include "include/opencvincludes.hpp"
+#include "include/connectedcomponent.hpp"
 
 void getBlackLayer(cv::Vec3b thresholds, cv::Mat input, cv::Mat* output);
-//bool isBlack (cv::Vec3b check);
 bool isBlack (uchar check);
+
+std::vector<cv::Vec2i> eightConnectedNeighbors(cv::Vec2i pixel, cv::Mat* image);
+std::vector<cv::Vec2i> getBlackComponentPixels (cv::Vec2i pixel, cv::Mat* image);
+void eraseComponentPixels (ConnectedComponent comp, cv::Mat* image);
 
 bool isValidCoord (cv::Vec2i* check);
 

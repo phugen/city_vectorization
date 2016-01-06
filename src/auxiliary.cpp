@@ -4,6 +4,12 @@
 
 #include "include/auxiliary.hpp"
 #include "include/colorconversions.hpp"
+#include "include/connectedcomponent.hpp"
+
+#include <queue>
+#include <list>
+#include <algorithm>
+#include <iostream>
 
 using namespace std;
 using namespace cv;
@@ -14,10 +20,206 @@ using namespace cv;
     return((check[0] == 0) && (check[1] == 0) && (check[2] == 0));
 }*/
 
-// checks if a pixel is purely black (refactor with type check?)
+// checks if a pixel is purely blac
 bool isBlack (uchar check)
 {
     return (check == 0);
+}
+
+// Returns a list of all eight-connected neighbors
+// of the input pixel.
+//
+// DON'T mistake this for the check in unionfindcomponents.cpp, which
+// operates in a scanline fashion and checks for black pixels, and thus
+// gives different neighbors for a pixel.
+vector<Vec2i> eightConnectedNeighbors(Vec2i pixel, Mat* image)
+{
+    vector<Vec2i> neighbors; // output list
+    int cols = image->cols;
+    int rows = image->rows;
+    int i = pixel[0];
+    int j = pixel[1];
+
+    // top left pixel
+    if(i == 0 && j == 0)
+    {
+        neighbors.push_back(Vec2i(i+1, j));
+        neighbors.push_back(Vec2i(i+1, j+1));
+        neighbors.push_back(Vec2i(i, j+1));
+    }
+
+    // top right pixel
+    else if(i == 0 && j == (cols - 1))
+    {
+        neighbors.push_back(Vec2i(i+1, j));
+        neighbors.push_back(Vec2i(i+1, j-1));
+        neighbors.push_back(Vec2i(i, j-1));
+    }
+
+
+    // bottom left pixel
+    else if (i == (rows - 1) && j == 0)
+    {
+        neighbors.push_back(Vec2i(i, j+1));
+        neighbors.push_back(Vec2i(i-1, j+1));
+        neighbors.push_back(Vec2i(i-1, j));
+    }
+
+    // bottom right pixel
+    else if (i == (rows - 1) && j == (cols - 1))
+    {
+        neighbors.push_back(Vec2i(i-1, j));
+        neighbors.push_back(Vec2i(i-1, j-1));
+        neighbors.push_back(Vec2i(i, j-1));
+    }
+
+    // upper border
+    else if (i == 0)
+    {
+        neighbors.push_back(Vec2i(i, j+1));
+        neighbors.push_back(Vec2i(i-1, j+1));
+        neighbors.push_back(Vec2i(i-1, j));
+        neighbors.push_back(Vec2i(i-1, j-1));
+        neighbors.push_back(Vec2i(i, j-1));
+    }
+
+    // left border
+    else if (j == 0)
+    {
+        neighbors.push_back(Vec2i(i-1, j));
+        neighbors.push_back(Vec2i(i-1, j+1));
+        neighbors.push_back(Vec2i(i, j+1));
+        neighbors.push_back(Vec2i(i+1, j+1));
+        neighbors.push_back(Vec2i(i+1, j));
+    }
+
+    // right border
+    else if (j == (cols - 1))
+    {
+        neighbors.push_back(Vec2i(i-1, j));
+        neighbors.push_back(Vec2i(i+1, j));
+        neighbors.push_back(Vec2i(i+1, j-1));
+        neighbors.push_back(Vec2i(i, j-1));
+        neighbors.push_back(Vec2i(i-1, j-1));
+    }
+
+    // lower border
+    else if (i == (rows - 1))
+    {
+        neighbors.push_back(Vec2i(i, j-1));
+        neighbors.push_back(Vec2i(i-1, j-1));
+        neighbors.push_back(Vec2i(i-1, j));
+        neighbors.push_back(Vec2i(i-1, j+1));
+        neighbors.push_back(Vec2i(i, j+1));
+    }
+
+    // Normal case - pixel is somewhere
+    // in the image, but not near any border.
+    else
+    {
+        neighbors.push_back(Vec2i(i-1, j));
+        neighbors.push_back(Vec2i(i-1, j+1));
+        neighbors.push_back(Vec2i(i, j+1));
+        neighbors.push_back(Vec2i(i+1, j+1));
+        neighbors.push_back(Vec2i(i+1, j));
+        neighbors.push_back(Vec2i(i+1, j-1));
+        neighbors.push_back(Vec2i(i, j-1));
+        neighbors.push_back(Vec2i(i-1, j-1));
+    }
+
+    return neighbors;
+}
+
+
+// Returns all black pixels that can be reached
+// from the input pixel, including the pixel itself.
+// Expects a greyscale matrix.
+vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
+{
+    vector<Vec2i> connected; // output list
+
+    // queue for new, unexpanded nodes
+    queue<Vec2i> active;
+
+    // Set for expanded nodes (uses custom Vec2i comparator function)
+    list<Vec2i> inactive;
+
+    if(image->channels() > 1)
+    {
+        cout << "blackNeighbors: Matrix had " << image->channels() << " channels instead of 1!" << "\n";
+        return connected;
+    }
+
+    // if starting point is not black
+    // return empty list
+    if(!isBlack(image->at<uchar>(pixel[1], pixel[0])))
+        return connected;
+
+    else
+    {
+        // add start pixel to open set and output
+        active.push(pixel);
+        connected.push_back(pixel);
+
+        // search neighbors while
+        // there are still unexpanded pixels
+        while (!active.empty())
+        {
+            // take next unexpanded node
+            Vec2i current = active.front();
+
+            // retrieve all neighbors for the current pixel
+            vector<Vec2i> currentNeighbors = eightConnectedNeighbors(current, image);
+
+            // add black neighbors to the output list and active set
+            // if they haven't been expanded yet (= that are not in the inactive set)
+            for(vector<Vec2i>::iterator neighbor = currentNeighbors.begin(); neighbor != currentNeighbors.end(); neighbor++)
+            {
+                if((find(inactive.begin(), inactive.end(), *neighbor) == inactive.end()) &&
+                        isBlack(image->at<uchar>(((*neighbor)[1]), (*neighbor)[0])))
+                {
+                    connected.push_back(*neighbor);
+                    active.push(*neighbor);
+                    inactive.push_back(*neighbor); // mark as found
+                }
+            }
+
+            // mark current pixel as expanded
+            inactive.push_back(current);
+
+            // erase current pixel from active set
+            // and make the next pixel the current pixel
+            active.pop();
+        }
+
+        cout << "#Black component pixels: " << connected.size() << "\n";
+        return connected;
+    }
+}
+
+// Erase all black pixels that belong to a component.
+// TODO: Swap "seed" for Component object.
+void eraseComponentPixels (ConnectedComponent comp, Mat* image)
+{
+    Vec2i seed = comp.seed;
+
+    // check if seed is out of bounds
+    if(seed[0] < 0 || seed[0] > image->cols ||
+            seed[1] < 0 || seed[1] > image->rows)
+    {
+        cout << "eraseComponentPixels: Seed of bounds!\n";
+        cout << "Image was " << image->rows << ", " << image->cols << " (rows, cols)\n";
+        cout << "Seed was " << seed[1] << ", " << seed[0] << "\n";
+
+        return;
+    }
+
+    // get all black pixels that are reachable from the seed
+    vector<Vec2i> pixels = getBlackComponentPixels(seed, image);
+
+    // swap all black component pixels for white ones
+    for(vector<Vec2i>::iterator pixel = pixels.begin(); pixel != pixels.end(); pixel++)
+        (*image).at<uchar>((*pixel)[1], (*pixel)[0]) = 255;
 }
 
 /**

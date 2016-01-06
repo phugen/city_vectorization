@@ -3,17 +3,16 @@
 using namespace std;
 using namespace cv;
 
-ConnectedComponent::ConnectedComponent(Vec2i newmin, Vec2i newmax, int newPixels)
+ConnectedComponent::ConnectedComponent(Vec2i newmin, Vec2i newmax, int newPixels, Vec2i seed)
 {
     mbr_min = newmin;
     mbr_max = newmax;
-    top = newmax; // dummy
-    bot = newmin; // dummy
 
     int x = (newmin[0] + newmax[0]) / 2;
     int y = (newmin[1] + newmax[1]) / 2;
     centroid = Vec2i(x, y);
 
+    this->seed = seed;
     numPixels = newPixels;
 }
 

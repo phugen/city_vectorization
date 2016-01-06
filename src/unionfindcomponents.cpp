@@ -22,6 +22,7 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
     int label = 1; // number of first component
     int** labels; // keeps track of which pixel belongs to which component
     int* pxPerLabel; // number of black pixels in label
+    Vec2i* seedPerLabel; // seed[label] = coordinates of the first black pixel in the component
 
     UnionFind* uf; // union-find data structure
     vector<Vec2i> neighborPositions; // (x,y) positions of all black neighbors of current pixel
@@ -39,9 +40,16 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
 
     // initialize black pixel count per label
     pxPerLabel = new int[rows * cols];
-
     for(int i = 0; i < (rows * cols); i++)
         pxPerLabel[i] = 0;
+
+    // initialize label->seed lookup table
+    // with dummy values
+    seedPerLabel = new Vec2i[sizeof(labels) / sizeof(int)];
+    for (int i = 0; i < (sizeof(labels) / sizeof(int)); i++)
+    {
+        seedPerLabel[i] = Vec2i(-1, -1);
+    }
 
     // initialize MBR coordinate array
     MBRCoords = new Vec2i*[rows * cols];
@@ -159,9 +167,10 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                     MBRCoords[label][0] = Vec2i(i, j);
                     MBRCoords[label][1] = Vec2i(i, j);
 
-                    // update label and black pixel count
+                    // update label, seed and black pixel count
                     // for this label
                     labels[i][j] = label;
+                    seedPerLabel[label] = Vec2i(j, i);
                     pxPerLabel[label] = 1;
 
                     // next black pixel could be a new label
@@ -188,9 +197,10 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                         minLabel = min(minLabel, labels[nPos[0]][nPos[1]]);
                     }
 
-                    // assign smallest label to current pixel
+                    // assign smallest label to current pixel, update seed
                     // and increase black pixel counter
                     labels[i][j] = minLabel;
+                    seedPerLabel[minLabel] = Vec2i(j, i);
                     pxPerLabel[minLabel] += 1;
 
                     // if the newly labelled pixel changes the MBR
@@ -228,7 +238,13 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                 MBRCoords[newLabel][1][0] = max(MBRCoords[newLabel][1][0], MBRCoords[oldLabel][1][0]);
                 MBRCoords[newLabel][1][1] = max(MBRCoords[newLabel][1][1], MBRCoords[oldLabel][1][1]);
 
-                // and add one to the new label's count
+                // update seed; since it doesn't matter which
+                // one is chosen, just choose the new one
+                //
+                // actually, this should be useless. TODO
+                seedPerLabel[oldLabel] = seedPerLabel[newLabel];
+
+                // and add one to the new label's pixel count
                 // for every pixel that was changed
                 pxPerLabel[newLabel] += 1;
             }
@@ -273,23 +289,19 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
 
         // create connected component
         // and store it in vector
-        components->push_back(*(new ConnectedComponent(MBRCoords[*iter][0], MBRCoords[*iter][1], pxPerLabel[*iter])));
+        components->push_back(*(new ConnectedComponent(MBRCoords[*iter][0], MBRCoords[*iter][1], pxPerLabel[*iter], seedPerLabel[*iter])));
 
-        // rectangle works with (col,row) for some
-        // reason, so swap coordinates
+        // rectangle works with (col,row), so swap coordinates
         Point min = Vec2i(MBRCoords[*iter][0][1], MBRCoords[*iter][0][0]);
         Point max = Vec2i(MBRCoords[*iter][1][1], MBRCoords[*iter][1][0]);
 
         // draw MBR for this component
         rectangle(showMBR, min, max, Scalar(0, 0, 255), 1, 8, 0);
-        //putText(comps, to_string(num), Point(min*0.5), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0,0,255), 1, 8, false);
     }
-
-    //for(vector<ConnectedComponent>::iterator iter = components->begin(); iter != components->end(); iter++)
-    //    cout << *iter;
 
     // cleanup
     delete [] labels;
+    delete [] seedPerLabel;
     delete [] pxPerLabel;
     delete [] MBRCoords;
     delete uf;
