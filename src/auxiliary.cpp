@@ -2,15 +2,17 @@
   Contains various helper functions.
  */
 
-#include <include/auxiliary.hpp>
+#include "include/auxiliary.hpp"
+#include "include/colorconversions.hpp"
 
-
+using namespace std;
+using namespace cv;
 
 // checks if a pixel is purely black
-bool isBlack (Vec3b check)
+/*bool isBlack (Vec3b check)
 {
     return((check[0] == 0) && (check[1] == 0) && (check[2] == 0));
-}
+}*/
 
 // checks if a pixel is purely black (refactor with type check?)
 bool isBlack (uchar check)

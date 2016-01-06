@@ -1,5 +1,8 @@
-#include <include/areafilter.hpp>
+#include "include/areafilter.hpp"
+#include <iostream>
 
+using namespace std;
+using namespace cv;
 
 // Dismiss any components that have an area ratio
 // less than 1:ratio or larger than ratio:1 because they

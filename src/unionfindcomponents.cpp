@@ -1,4 +1,14 @@
-#include <include/unionfindcomponents.hpp>
+#include "include/unionfindcomponents.hpp"
+#include "include/unionfind.hpp"
+#include "include/auxiliary.hpp"
+#include "include/colorconversions.hpp"
+
+#include <iostream>
+#include <set>
+
+using namespace std;
+using namespace cv;
+
 
 // Two-pass connected-component finding.
 // (https://en.wikipedia.org/wiki/Connected-component_labeling)

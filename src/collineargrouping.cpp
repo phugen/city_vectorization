@@ -1,4 +1,14 @@
-#include <include/collineargrouping.hpp>
+#define _USE_MATH_DEFINES
+
+#include "include/collineargrouping.hpp"
+#include <cmath>
+#include <iostream>
+
+#include "include/auxiliary.hpp"
+#include "include/colorconversions.hpp"
+
+using namespace std;
+using namespace cv;
 
 // Performs collinear grouping of potential characters
 // via Hough (line) transformation on the MBR centroids of all components

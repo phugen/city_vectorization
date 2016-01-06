@@ -1,3 +1,6 @@
+#ifndef CONNECTEDCOMPONENT_HPP
+#define CONNECTEDCOMPONENT_HPP
+
 #include "opencvincludes.hpp"
 
 /**
@@ -30,8 +33,10 @@ class ConnectedComponent
        // Returns true if the MBR of this component is intersected by the
        // Hessian normal form line = (theta, rho), or if the line
        // is its tangent.
-       bool intersected (float rho, float theta);
+       //bool intersected (float rho, float theta);
 
        // overwrite << operator to output information about this component
        friend std::ostream& operator << (std::ostream& stream, const ConnectedComponent& obj);
 };
+
+#endif // CONNECTEDCOMPONENT_HPP

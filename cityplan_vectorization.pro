@@ -7,42 +7,27 @@ CONFIG -= app_bundle
 
 TEMPLATE = app
 
-SOURCES += main.cpp \
-    connectedcomponent.cpp \
-    colorconversions.cpp \
-    unionfind.cpp \
-    customhoughtransform.cpp \
+SOURCES += \
+    src/areafilter.cpp \
+    src/auxiliary.cpp \
+    src/collineargrouping.cpp \
     src/colorconversions.cpp \
     src/connectedcomponent.cpp \
     src/customhoughtransform.cpp \
     src/main.cpp \
-    src/auxiliary.cpp \
-    src/collineargrouping.cpp \
-    src/areafilter.cpp \
-    src/unionfindcomponents.cpp \
-    src/unionfind.cpp
+    src/unionfind.cpp \
+    src/unionfindcomponents.cpp
 
 HEADERS += \
-    connectedcomponent.hpp \
-    colorconversions.hpp \
-    unionfind.hpp \
-    opencvincludes.hpp \
-    customhoughtransform.hpp \
-    header/colorconversions.hpp \
-    header/connectedcomponent.hpp \
-    header/customhoughtransform.hpp \
-    header/medoidHough.hpp \
-    header/opencvincludes.hpp \
-    header/unionfind.hpp \
+    include/areafilter.hpp \
+    include/auxiliary.hpp \
+    include/collineargrouping.hpp \
     include/colorconversions.hpp \
     include/connectedcomponent.hpp \
     include/customhoughtransform.hpp \
     include/opencvincludes.hpp \
-    include/auxiliary.hpp \
-    include/collineargrouping.hpp \
-    include/areafilter.hpp \
-    include/unionfindcomponents.hpp \
-    include/unionfind.hpp
+    include/unionfind.hpp \
+    include/unionfindcomponents.hpp
 
 INCLUDEPATH += "C:/opencv/build/include"
 

@@ -1,21 +1,11 @@
-#define _USE_MATH_DEFINES
-
 #include "include/opencvincludes.hpp"
-#include "include/connectedcomponent.hpp"
-#include "include/colorconversions.hpp"
-#include "include/unionfind.hpp"
-#include "include/customhoughtransform.hpp"
 #include "include/auxiliary.hpp"
+#include "include/unionfindcomponents.hpp"
+#include "include/areafilter.hpp"
+#include "include/collineargrouping.hpp"
 
 #include <iostream>
-#include <list>
-#include <set>
-#include <array>
-#include <vector>
-#include <cmath>
 
-#include <random>
-#include <ctime>
 
 using namespace std;
 using namespace cv;
