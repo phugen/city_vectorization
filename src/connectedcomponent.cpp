@@ -1,4 +1,4 @@
-#include "connectedcomponent.hpp"
+#include "include/connectedcomponent.hpp"
 
 using namespace std;
 using namespace cv;

@@ -1,9 +1,10 @@
-#include "colorconversions.hpp"
-#include "opencvincludes.hpp"
+#include "include/colorconversions.hpp"
+#include "include/opencvincludes.hpp"
 #include <iostream>
 
 using namespace std;
 using namespace cv;
+
 
 // r,g,b values are from 0 to 1
 // h = [0,360], s = [0,1], v = [0,1]
@@ -117,4 +118,17 @@ Vec3i HSVtoRGB(Vec3i hsv)
 
     //cout << ", RGB: (" << r << "," << g << "," << b << "\n\n";
     return Vec3i(255 * b, 255 * g, 255 * r);
+}
+
+// maps an integer range to RGB color vectors.
+Vec3i intToRGB (Vec2i range, int value)
+{
+    //float min = (float) range[0];
+    float max = (float) range[1];
+
+    int h = (360 / max) * value;
+
+    Vec3i hsv = Vec3i(h, 1, 1);
+
+    return HSVtoRGB(hsv);
 }

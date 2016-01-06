@@ -11,14 +11,38 @@ SOURCES += main.cpp \
     connectedcomponent.cpp \
     colorconversions.cpp \
     unionfind.cpp \
-    customhoughtransform.cpp
+    customhoughtransform.cpp \
+    src/colorconversions.cpp \
+    src/connectedcomponent.cpp \
+    src/customhoughtransform.cpp \
+    src/main.cpp \
+    src/auxiliary.cpp \
+    src/collineargrouping.cpp \
+    src/areafilter.cpp \
+    src/unionfindcomponents.cpp \
+    src/unionfind.cpp
 
 HEADERS += \
     connectedcomponent.hpp \
     colorconversions.hpp \
     unionfind.hpp \
     opencvincludes.hpp \
-    customhoughtransform.hpp
+    customhoughtransform.hpp \
+    header/colorconversions.hpp \
+    header/connectedcomponent.hpp \
+    header/customhoughtransform.hpp \
+    header/medoidHough.hpp \
+    header/opencvincludes.hpp \
+    header/unionfind.hpp \
+    include/colorconversions.hpp \
+    include/connectedcomponent.hpp \
+    include/customhoughtransform.hpp \
+    include/opencvincludes.hpp \
+    include/auxiliary.hpp \
+    include/collineargrouping.hpp \
+    include/areafilter.hpp \
+    include/unionfindcomponents.hpp \
+    include/unionfind.hpp
 
 INCLUDEPATH += "C:/opencv/build/include"
 
