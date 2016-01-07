@@ -141,8 +141,8 @@ vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
     // queue for new, unexpanded nodes
     queue<Vec2i> active;
 
-    // Set for expanded nodes (uses custom Vec2i comparator function)
-    list<Vec2i> inactive;
+    // List of already expanded nodes
+    list<Vec2i> found;
 
     if(image->channels() > 1)
     {
@@ -157,8 +157,10 @@ vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
 
     else
     {
-        // add start pixel to open set and output
+        // add start pixel to open set, set as found
+        // and add to list of output pixels
         active.push(pixel);
+        found.push_back(pixel);
         connected.push_back(pixel);
 
         // search neighbors while
@@ -171,24 +173,20 @@ vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
             // retrieve all neighbors for the current pixel
             vector<Vec2i> currentNeighbors = eightConnectedNeighbors(current, image);
 
-            // add black neighbors to the output list and active set
-            // if they haven't been expanded yet (= that are not in the inactive set)
+            // add black neighbors to the active queue, mark them as found and add them to the output
+            // if they haven't been expanded yet (= they are not in the "found" list)
             for(vector<Vec2i>::iterator neighbor = currentNeighbors.begin(); neighbor != currentNeighbors.end(); neighbor++)
             {
-                if((find(inactive.begin(), inactive.end(), *neighbor) == inactive.end()) &&
+                if((find(found.begin(), found.end(), *neighbor) == found.end()) &&
                         isBlack(image->at<uchar>(((*neighbor)[1]), (*neighbor)[0])))
                 {
-                    connected.push_back(*neighbor);
                     active.push(*neighbor);
-                    inactive.push_back(*neighbor); // mark as found
+                    found.push_back(*neighbor);
+                    connected.push_back(*neighbor);
                 }
             }
 
-            // mark current pixel as expanded
-            inactive.push_back(current);
-
             // erase current pixel from active set
-            // and make the next pixel the current pixel
             active.pop();
         }
 

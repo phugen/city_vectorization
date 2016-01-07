@@ -16,9 +16,10 @@ int main (int argc, char** argv)
     Mat original, *output;
     vector<ConnectedComponent> components;
 
-    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer_2.png", CV_LOAD_IMAGE_COLOR);
+    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer_2.png", CV_LOAD_IMAGE_COLOR);
     //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/peter.png", CV_LOAD_IMAGE_COLOR);
-    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/jointest.png", CV_LOAD_IMAGE_COLOR);
+    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/jointest.png", CV_LOAD_IMAGE_COLOR);
+    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/erasetest.png", CV_LOAD_IMAGE_COLOR);
 
     // output matrix will be unsigned 8-bit (use uchar instead of Vec3b)
     output = new Mat(original.rows, original.cols, CV_8U);
@@ -29,10 +30,10 @@ int main (int argc, char** argv)
     //Vec3b thresholds = Vec3b(160, 160, 160);
     Vec3b thresholds = Vec3b(180, 180, 180);
 
-    getBlackLayer(thresholds, original, output);
-    unionFindComponents(*output, &components);
-    areaFilter(*output, &components, 10);
-    //collinearGrouping(*output, &components);
+    getBlackLayer(thresholds, original, output); // get binary picture via thresholding
+    unionFindComponents(*output, &components); // get connected components (graphics, letters, combination of both)
+    areaFilter(*output, &components, 10); // filter out components with extreme dimensions (REVIEW - combination?)
+    //collinearGrouping(*output, &components); // cluster strings and remove them from the image
 
     for(vector<ConnectedComponent>::iterator c = components.begin(); c != components.end(); c++)
         eraseComponentPixels(*c, output);

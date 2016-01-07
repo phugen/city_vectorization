@@ -38,3 +38,4 @@ LIBS += -LC:/opencv/build/x86/mingw/bin \
             -lopencv_imgcodecs300 \
 
 CONFIG += c++11
+QMAKE_LFLAGS_WINDOWS += -Wl,--stack,32000000
