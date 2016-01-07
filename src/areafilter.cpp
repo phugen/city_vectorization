@@ -1,4 +1,5 @@
 #include "include/areafilter.hpp"
+#include "include/auxiliary.hpp"
 #include <iostream>
 
 using namespace std;
@@ -20,21 +21,16 @@ void areaFilter(Mat input, vector<ConnectedComponent>* components, int ratio)
         // if the ratio is less than 1:20 or larger than 20:1
         // consider this component a non-character component
         if((ratio * x) < y || x > (ratio * y))
+        {
+            eraseComponentPixels (*iter, &input);
             iter = components->erase(iter);
+        }
 
         else
             iter++;
     }
 
     cout << "#Components after area filter: " << components->size() << "\n";
-
-    for(vector<ConnectedComponent>::iterator iter = components->begin(); iter != components->end(); iter++)
-    {
-        Point min = Vec2i((*iter).mbr_min[1], (*iter).mbr_min[0]);
-        Point max = Vec2i((*iter).mbr_max[1], (*iter).mbr_max[0]);
-
-        rectangle(input, min, max, Scalar(0, 0, 255), 1, 8, 0);
-    }
 
     // show result
     //namedWindow("AREA FILTER", WINDOW_AUTOSIZE);

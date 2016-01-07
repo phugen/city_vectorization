@@ -16,7 +16,8 @@ SOURCES += \
     src/customhoughtransform.cpp \
     src/main.cpp \
     src/unionfind.cpp \
-    src/unionfindcomponents.cpp
+    src/unionfindcomponents.cpp \
+    src/zhangsuen.cpp
 
 HEADERS += \
     include/areafilter.hpp \
@@ -27,7 +28,8 @@ HEADERS += \
     include/customhoughtransform.hpp \
     include/opencvincludes.hpp \
     include/unionfind.hpp \
-    include/unionfindcomponents.hpp
+    include/unionfindcomponents.hpp \
+    include/zhangsuen.hpp
 
 INCLUDEPATH += "C:/opencv/build/include"
 
@@ -38,4 +40,3 @@ LIBS += -LC:/opencv/build/x86/mingw/bin \
             -lopencv_imgcodecs300 \
 
 CONFIG += c++11
-QMAKE_LFLAGS_WINDOWS += -Wl,--stack,32000000

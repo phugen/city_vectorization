@@ -30,7 +30,7 @@ bool isBlack (uchar check)
 // of the input pixel.
 //
 // DON'T mistake this for the check in unionfindcomponents.cpp, which
-// operates in a scanline fashion and checks for black pixels, and thus
+// operates in a scanline fashion plus checks for black pixels, and thus
 // gives different neighbors for a pixel.
 vector<Vec2i> eightConnectedNeighbors(Vec2i pixel, Mat* image)
 {
@@ -130,19 +130,93 @@ vector<Vec2i> eightConnectedNeighbors(Vec2i pixel, Mat* image)
     return neighbors;
 }
 
+Vec2i pointToVec (Point p)
+{
+    return Vec2i(p.x, p.y);
+}
+
+vector<Vec2i> pointToVec (vector<Point> pl)
+{
+    vector<Vec2i> ret(pl.size());
+
+    for(size_t i = 0; i < pl.size(); i++)
+        ret[i] = Vec2i(pl[i].x, pl[i].y);
+
+    return ret;
+}
+
+// Returns all corner pixels that are reachable from the input
+// CORNER PIXEL(!). It is expected that the input pixel is not in the
+// corner input vector.
+//
+// Once a corner is hit, the search is discontinued in
+// that "direction".
+//
+// It is assumed that image is binary black/white,
+// with white being the background color, and that
+// the image was thinned so all possible paths
+// are only one pixel wide.
+//
+// Since the code is very similiar, see getBlackComponentPixels for code commentary.
+vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image)
+{
+    queue<Vec2i> active;
+    vector<Vec2i> found;
+    vector<Vec2i> corners_reachable;
+
+    if(!isBlack(image->at<uchar>(pixel[1], pixel[0])))
+        return corners_reachable;
+
+    else
+    {
+        active.push(pixel);
+        found.push_back(pixel);
+
+
+        while (!active.empty())
+        {
+            Vec2i current = active.front();
+            vector<Vec2i> currentNeighbors = eightConnectedNeighbors(current, image);
+
+            for(vector<Vec2i>::iterator neighbor = currentNeighbors.begin(); neighbor != currentNeighbors.end(); neighbor++)
+            {
+                if((find(found.begin(), found.end(), *neighbor) == found.end()) &&
+                        isBlack(image->at<uchar>(((*neighbor)[1]), (*neighbor)[0])))
+                {
+                    // neighbor is a corner
+                    if(find(corners.begin(), corners.end(), current) != corners.end())
+                    {
+                        corners_reachable.push_back(*neighbor);
+                        found.push_back(*neighbor);
+
+                        break; // stop search in this direction
+                    }
+
+                    // neighbor is a regular black pixel
+                    else
+                    {
+                        active.push(*neighbor);
+                        found.push_back(*neighbor);
+                    }
+                }
+            }
+
+            active.pop();
+        }
+
+        cout << "#Corners reachable: " << corners_reachable.size() << "\n";
+        return corners_reachable;
+    }
+}
 
 // Returns all black pixels that can be reached
 // from the input pixel, including the pixel itself.
 // Expects a greyscale matrix.
 vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
 {
+    queue<Vec2i> active; // queue for new, unexpanded nodes
+    vector<Vec2i> found; // list for expanded nodes
     vector<Vec2i> connected; // output list
-
-    // queue for new, unexpanded nodes
-    queue<Vec2i> active;
-
-    // List of already expanded nodes
-    list<Vec2i> found;
 
     if(image->channels() > 1)
     {
@@ -157,11 +231,10 @@ vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
 
     else
     {
-        // add start pixel to open set, set as found
-        // and add to list of output pixels
+        // add start pixel to open set and output
         active.push(pixel);
-        found.push_back(pixel);
         connected.push_back(pixel);
+        found.push_back(pixel);
 
         // search neighbors while
         // there are still unexpanded pixels
@@ -173,20 +246,21 @@ vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
             // retrieve all neighbors for the current pixel
             vector<Vec2i> currentNeighbors = eightConnectedNeighbors(current, image);
 
-            // add black neighbors to the active queue, mark them as found and add them to the output
-            // if they haven't been expanded yet (= they are not in the "found" list)
+            // look at black neighbors
+            // if they haven't been expanded yet (= that are not in the "found" list)
             for(vector<Vec2i>::iterator neighbor = currentNeighbors.begin(); neighbor != currentNeighbors.end(); neighbor++)
             {
                 if((find(found.begin(), found.end(), *neighbor) == found.end()) &&
                         isBlack(image->at<uchar>(((*neighbor)[1]), (*neighbor)[0])))
                 {
-                    active.push(*neighbor);
-                    found.push_back(*neighbor);
                     connected.push_back(*neighbor);
+                    active.push(*neighbor);
+                    found.push_back(*neighbor); // mark as found
                 }
             }
 
             // erase current pixel from active set
+            // and make the next pixel the current pixel
             active.pop();
         }
 
@@ -218,6 +292,8 @@ void eraseComponentPixels (ConnectedComponent comp, Mat* image)
     // swap all black component pixels for white ones
     for(vector<Vec2i>::iterator pixel = pixels.begin(); pixel != pixels.end(); pixel++)
         (*image).at<uchar>((*pixel)[1], (*pixel)[0]) = 255;
+
+    cout << "DONE" << "\n";
 }
 
 /**

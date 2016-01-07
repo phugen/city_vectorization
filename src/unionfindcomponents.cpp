@@ -20,48 +20,29 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
     const int cols = input.cols;
 
     int label = 1; // number of first component
-    int* labels; // keeps track of which pixel belongs to which component
+    vector<int> labels = vector<int>(rows * cols, 0); // keeps track of which pixel belongs to which component, 0 = "background"
     int* pxPerLabel; // number of black pixels in label
     Vec2i* seedPerLabel; // seed[label] = coordinates of the first black pixel in the component
 
     UnionFind* uf; // union-find data structure
     vector<Vec2i> neighborPositions; // (x,y) positions of all black neighbors of current pixel
-    vector<int>* nb_labels; // contains the labels of the neighbors of a pixel
-    set<int>* trueLabels; // contains the actually valid labels.
+    vector<int> nb_labels; // contains the labels of the neighbors of a pixel
+    set<int> trueLabels; // contains the actually valid labels.
 
     Vec2i** MBRCoords; // contains min- and max points of each component's MBR
-
-
-
-    // initialize labels
-    // and assign all pixels the "background" label, "0"
-    labels = new int [rows * cols];
-
-    for(int i = 0; i < rows; i++)
-        for(int j = 0; j < cols; j++)
-            labels[i * cols + j] = 0;
-
-
-    // initialize neighbor labels
-    nb_labels = new vector<int>();
-
-    // initialize trueLabels
-    trueLabels = new set<int>();
 
     // initialize black pixel count per label
     pxPerLabel = new int[rows * cols];
     for(int i = 0; i < (rows * cols); i++)
         pxPerLabel[i] = 0;
 
-
     // initialize label->seed lookup table
     // with dummy values
-    seedPerLabel = new Vec2i[sizeof(labels) / sizeof(int)];
-    for (size_t i = 0; i < (int) (sizeof(labels) / sizeof(int)); i++)
+    seedPerLabel = new Vec2i[rows * cols];
+    for (int i = 0; i < (rows * cols); i++)
     {
         seedPerLabel[i] = Vec2i(-1, -1);
     }
-
 
     // initialize MBR coordinate array
     MBRCoords = new Vec2i*[rows * cols];
@@ -75,7 +56,6 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
             MBRCoords[(i * cols) + j][0] = Vec2i(INT_MAX, INT_MAX);
             MBRCoords[(i * cols) + j][1] = Vec2i(-1, -1);
         }
-
 
     // initialize union-find
     uf = new UnionFind(rows * cols);
@@ -188,7 +168,7 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                 else
                 {
                     // reset list of neighbor labels
-                    nb_labels->clear();
+                    nb_labels.clear();
 
                     // begin with the first label ...
                     Vec2i first = neighborPositions.front();
@@ -200,7 +180,7 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                         Vec2i nPos = *nbpIter;
 
                         // save labels for each neighbor
-                        nb_labels->push_back(labels[nPos[0] * cols + nPos[1]]);
+                        nb_labels.push_back(labels[nPos[0] * cols + nPos[1]]);
 
                         // find smallest label
                         minLabel = min(minLabel, labels[nPos[0] * cols + nPos[1]]);
@@ -214,13 +194,13 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
 
                     // if the newly labelled pixel changes the MBR
                     // of that label's region, update it
-                    MBRCoords[minLabel][0][0] = min(MBRCoords[minLabel][0][0], i);
-                    MBRCoords[minLabel][0][1] = min(MBRCoords[minLabel][0][1], j);
-                    MBRCoords[minLabel][1][0] = max(MBRCoords[minLabel][1][0], i);
-                    MBRCoords[minLabel][1][1] = max(MBRCoords[minLabel][1][1], j);
+                    (MBRCoords[minLabel][0])[0] = min((MBRCoords[minLabel][0])[0], i);
+                    (MBRCoords[minLabel][0])[1] = min((MBRCoords[minLabel][0])[1], j);
+                    (MBRCoords[minLabel][1])[0] = max((MBRCoords[minLabel][1])[0], i);
+                    (MBRCoords[minLabel][1])[1] = max((MBRCoords[minLabel][1])[1], j);
 
                     // merge components
-                    for (vector<int>::iterator nblIter = nb_labels->begin(); nblIter != nb_labels->end(); nblIter++)
+                    for (vector<int>::iterator nblIter = nb_labels.begin(); nblIter != nb_labels.end(); nblIter++)
                         uf->merge(minLabel, *nblIter);
                 }
             }
@@ -242,10 +222,10 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
             if(oldLabel != newLabel)
             {
                 // update MBR bounds if necessary
-                MBRCoords[newLabel][0][0] = min(MBRCoords[newLabel][0][0], MBRCoords[oldLabel][0][0]);
-                MBRCoords[newLabel][0][1] = min(MBRCoords[newLabel][0][1], MBRCoords[oldLabel][0][1]);
-                MBRCoords[newLabel][1][0] = max(MBRCoords[newLabel][1][0], MBRCoords[oldLabel][1][0]);
-                MBRCoords[newLabel][1][1] = max(MBRCoords[newLabel][1][1], MBRCoords[oldLabel][1][1]);
+                (MBRCoords[newLabel][0])[0] = min((MBRCoords[newLabel][0])[0], (MBRCoords[oldLabel][0])[0]);
+                (MBRCoords[newLabel][0])[1] = min((MBRCoords[newLabel][0])[1], (MBRCoords[oldLabel][0])[1]);
+                (MBRCoords[newLabel][1])[0] = max((MBRCoords[newLabel][1])[0], (MBRCoords[oldLabel][1])[0]);
+                (MBRCoords[newLabel][1])[1] = max((MBRCoords[newLabel][1])[1], (MBRCoords[oldLabel][1])[1]);
 
                 // update seed; since it doesn't matter which
                 // one is chosen, just choose the new one
@@ -259,14 +239,14 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
             }
 
             // update label value and record actually used labels
-            labels[i * cols + j] = uf->find(labels[i * cols + j]);
-            trueLabels->insert(uf->find(labels[i * cols + j]));
+            labels[i* cols + j] = uf->find(labels[i * cols + j]);
+            trueLabels.insert(uf->find(labels[i * cols + j]));
         }
 
     cout << "SECOND PASS DONE" << "\n\n";
 
 
-    int numTrueComponents = trueLabels->size();
+    int numTrueComponents = trueLabels.size();
     cout << "Number of components found: " << numTrueComponents << "\n";
 
 
@@ -290,7 +270,7 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
 
 
     // retrieve MBRs and show them
-    for(set<int>::iterator iter = trueLabels->begin(); iter != trueLabels->end(); iter++)
+    for(set<int>::iterator iter = trueLabels.begin(); iter != trueLabels.end(); iter++)
     {
         // skip coordinates of invalid sets
         if(!isValidCoord(MBRCoords[*iter]))
@@ -298,24 +278,22 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
 
         // create connected component
         // and store it in vector
-        components->push_back(*(new ConnectedComponent(MBRCoords[*iter][0], MBRCoords[*iter][1], pxPerLabel[*iter], seedPerLabel[*iter])));
+        components->push_back(*(new ConnectedComponent((MBRCoords[*iter])[0], (MBRCoords[*iter])[1], pxPerLabel[*iter], seedPerLabel[*iter])));
 
         // rectangle works with (col,row), so swap coordinates
-        Point min = Vec2i(MBRCoords[*iter][0][1], MBRCoords[*iter][0][0]);
-        Point max = Vec2i(MBRCoords[*iter][1][1], MBRCoords[*iter][1][0]);
+        Point min = Vec2i((MBRCoords[*iter][0])[1], (MBRCoords[*iter][0])[0]);
+        Point max = Vec2i((MBRCoords[*iter][1])[1], (MBRCoords[*iter][1])[0]);
 
         // draw MBR for this component
         rectangle(showMBR, min, max, Scalar(0, 0, 255), 1, 8, 0);
     }
 
     // cleanup
-    delete [] labels;
-    /*delete [] seedPerLabel;
+    //delete [] labels;
+    delete [] seedPerLabel;
     delete [] pxPerLabel;
     delete [] MBRCoords;
     delete uf;
-    delete nb_labels;
-    delete trueLabels;*/
 
     // show result
     namedWindow("Components", WINDOW_AUTOSIZE);
