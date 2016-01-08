@@ -1,4 +1,4 @@
 # city_vectorization
 
 ##Dependencies:
-* Cairo: see [readme_cairo_usage.txt](https://github.com/phugen/city_vectorization/blob/master/readme_cairo_usage.txt) to make cairo work with your project
+* [Cairo:](http://cairographics.org/) see [readme_cairo_usage.md](readme_cairo_usage.md) to make cairo work with your project
