@@ -14,7 +14,7 @@ bool isBlack (uchar check);
 
 std::vector<cv::Vec2i> eightConnectedNeighbors(cv::Vec2i pixel, cv::Mat* image);
 std::vector<cv::Vec2i> getBlackComponentPixels (cv::Vec2i pixel, cv::Mat* image);
-std::vector<cv::Vec2i> getNearestCorners(std::vector<cv::Vec2i> corners, cv::Vec2i pixel, cv::Mat* image);
+std::vector<cv::Vec2i> getNearestCorners(std::vector<cv::Vec2i> corners, cv::Vec2i pixel, cv::Mat* image, cv::Mat* reconstructed);
 void eraseComponentPixels (ConnectedComponent comp, cv::Mat* image);
 
 bool isValidCoord (cv::Vec2i* check);

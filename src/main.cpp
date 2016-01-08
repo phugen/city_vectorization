@@ -17,9 +17,9 @@ int main (int argc, char** argv)
     Mat original, *output;
     vector<ConnectedComponent> components;
 
-    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer_2.png", CV_LOAD_IMAGE_COLOR);
+    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer_2.png", CV_LOAD_IMAGE_COLOR);
     //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/peter.png", CV_LOAD_IMAGE_COLOR);
-    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/thintest.png", CV_LOAD_IMAGE_COLOR);
+    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/thintest2.png", CV_LOAD_IMAGE_COLOR);
 
     output = new Mat(original.rows, original.cols, CV_8U); // output matrix
     vector<Point2i> corners;
@@ -38,44 +38,41 @@ int main (int argc, char** argv)
     //collinearGrouping(*output, &components);
 
     bitwise_not(*output, *output); // algorithm expects binary picture with black background
-    thinning(*output);
-
     // find corners; find a way to describe min distance parameter dynamically if possible!
-    goodFeaturesToTrack(*output, corners, output->cols*output->rows, 0.1, 30. );
+    thinning(*output); // skeletonize image (1px lines only)
+    goodFeaturesToTrack(*output, corners, output->cols*output->rows, 0.1, 0 );
+
+
+    Mat reconstructed = Mat::zeros(original.rows, original.cols, original.type());
+    reconstructed = Scalar(255, 255, 255); // for showing reconstructed polygons
+
+    Mat cornerMat = *output; // for showing circles around detected corners
+    cvtColor(cornerMat, cornerMat,CV_GRAY2RGB);
+    bitwise_not(cornerMat, cornerMat);
 
     // show corners
     for(size_t i = 0; i < corners.size(); i++)
-        circle(*output, corners[i], 10, Scalar(255, 255, 255), 2);
+    {
+        cout << "CORNER: " << corners[i] << "\n";
+        //circle(cornerMat, corners[i], 10, Scalar(0, 255, 0), 1);
+        rectangle(cornerMat, corners[i], corners[i], Scalar(0, 0, 255), 3, 8, 0);
+    }
+
+    namedWindow("CORNERS", WINDOW_AUTOSIZE);
+    imshow("CORNERS", cornerMat);
 
     // find reachable corners for every point
-    vcorners = pointToVec(corners);
     bitwise_not(*output, *output);
+    vcorners = pointToVec(corners);
 
-    Mat testimage = Mat::zeros(original.rows, original.cols, original.type());
-    testimage = Scalar(255, 255, 255);
     for(auto iter = vcorners.begin(); iter != vcorners.end(); iter++)
     {
         Vec2i current = *iter;
-
-        vcorners.erase(iter);
-        vector<Vec2i> currNeigh = getNearestCorners(vcorners, current, output);
-
-        // debug lines
-        for(auto iter = currNeigh.begin(); iter != currNeigh.end(); iter++)
-        {
-            int iterno = iter - currNeigh.begin();
-
-            line(testimage, Point(current), Point(*iter), Scalar(0,0,0), 1);
-            //putText(testimage, to_string(iterno), current, FONT_HERSHEY_SIMPLEX, 0.4, Scalar(0,255,0), 1, 8, false);
-        }
+        vector<Vec2i> currNeigh = getNearestCorners(vcorners, current, output, &reconstructed);
     }
 
-
-    namedWindow("CORNERS", WINDOW_AUTOSIZE);
-    imshow("CORNERS", *output);
-
     namedWindow("RECONSTRUCTED", WINDOW_AUTOSIZE);
-    imshow("RECONSTRUCTED", testimage);
+    imshow("RECONSTRUCTED", reconstructed);
 
 
     waitKey(0);

@@ -158,11 +158,16 @@ vector<Vec2i> pointToVec (vector<Point> pl)
 // are only one pixel wide.
 //
 // Since the code is very similiar, see getBlackComponentPixels for code commentary.
-vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image)
+vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image, Mat* reconstructed)
 {
     queue<Vec2i> active;
     vector<Vec2i> found;
     vector<Vec2i> corners_reachable;
+
+    Mat test;
+    cvtColor(*image, test, CV_GRAY2RGB);
+    namedWindow("nearest", WINDOW_AUTOSIZE);
+
 
     if(!isBlack(image->at<uchar>(pixel[1], pixel[0])))
         return corners_reachable;
@@ -184,10 +189,14 @@ vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image)
                         isBlack(image->at<uchar>(((*neighbor)[1]), (*neighbor)[0])))
                 {
                     // neighbor is a corner
-                    if(find(corners.begin(), corners.end(), current) != corners.end())
+                    if(find(corners.begin(), corners.end(), *neighbor) != corners.end())
                     {
                         corners_reachable.push_back(*neighbor);
                         found.push_back(*neighbor);
+
+                        Point p = Point((*neighbor)[1], (*neighbor)[0]);
+                        rectangle(test, p, p, Scalar(255, 0, 0), 1, 8, 0);
+                        //imshow("nearest", test);
 
                         break; // stop search in this direction
                     }
@@ -202,6 +211,13 @@ vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image)
             }
 
             active.pop();
+        }
+
+        // debug lines
+        for(auto iter = corners_reachable.begin(); iter != corners_reachable.end(); iter++)
+        {
+            line(*reconstructed, Point(pixel), Point(*iter), Scalar(0,0,0), 1);
+            //putText(testimage, to_string(iterno), current, FONT_HERSHEY_SIMPLEX, 0.4, Scalar(0,255,0), 1, 8, false);
         }
 
         cout << "#Corners reachable: " << corners_reachable.size() << "\n";
