@@ -1,4 +1,7 @@
 #Cairo Library
+
+**Introduction:**
+
 Cairo is a 2d graphics library, which supports drawing on SVG files.
 I suggest reading more about cairo here: http://cairographics.org/tutorial/ and here: http://cairographics.org/samples/
 You can find the API somewhere on that site, too.
@@ -27,6 +30,10 @@ In your source code, if you want to use cairo (with svg support), add
 #include <cairo\cairo-svg.h>
 ```
 
-There's also a [code-sample](/sample/cairo.cpp) inside the sample folder.
+**Usage**
+
+I recommend looking at the sites linked at the top.
+
+Alternatively, there's also a [code-sample](/sample/cairo.cpp) inside the sample folder.
 
 *Appendix: I pulled the (x64) compiled libraries and header files from [https://github.com/tordex/cairo](https://github.com/tordex/cairo) , if you use a x86 environment, you should get the correct libraries from there.*
