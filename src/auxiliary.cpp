@@ -376,7 +376,8 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
         // converted intersection point (rho, theta).
         // This line is perpendicular, so its slope is the inverse of
         // the origin line: m_new = (-1/m).
-        double m = -1. / ((yi - 0) / (xi - 0));
+        // Check if xi is 0, since otherwise the slope will be undefined!
+        double m; xi == 0 ? m = -1. / INT_MAX : m = -1. / ((yi - 0) / (xi - 0));
 
         // Since the intersection point (x, y) is known, we can now
         // solve the line equation y = m*x + b for b: b = -(m*x) + y
@@ -387,7 +388,7 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
         Point pt2(image->cols, m * (image->cols) + b);
 
         // choose line color automatically based on range (0, size_of_list)
-        Scalar color = intToRGB(Vec2i(0, lines.size()), i);
+        //Scalar color = intToRGB(Vec2i(0, lines.size()), i);
 
         line(*image, pt1, pt2, color, 1);
     }
@@ -411,14 +412,24 @@ bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance)
 
     // find cartesian equation equal to (rho, theta)
     // (should also be possible directly but no idea how)
-    double m = -1. / ((poY - 0) / (poX - 0));
+    double m; poX == 0 ? m = (-1. / INT_MAX) : m = -1. / ((poY - 0) / (poX - 0));
     double b = -(m * poX) + poY;
 
     // plug in point and check if equation holds (within tolerance)
     // if yes, then the point is on the line.
-    double res = m * x + b;
+    double res = m * x + b; // only works for integer values!
 
-    if (abs(y - res) <= tolerance)
+    // find two points on the line.
+    Point begin = Point(0, (m * 0 + b));
+    Point end = Point (10000, (m * 10000 + b));
+
+    // calculate input point distance from line (needed because of float precision).
+    // since the minimum resolution of a screen is
+    // one pixel, that should probably be the tolerance threshold.
+    double normalLength = hypot(end.x - begin.x, end.y - begin.y);
+    double dist = (double) abs(((x - begin.x) * (end.y - begin.y) - (y - begin.y) * (end.x - begin.x)) / normalLength);
+
+    if (dist <= tolerance)
         return true;
     else
         return false;
@@ -431,6 +442,9 @@ bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance)
 // numRho is the total number of rho values in the matrix.
 void clusterCells (int totalNumberCells, float rhoStep, int numRho, Vec2f primaryCell, vector<Vec2f>* clusterLines)
 {
+    if(totalNumberCells == 0)
+        return;
+
     // generate half the lines below and the other half above the primary cell
     int numberCells = totalNumberCells / 2; // Problem due to rounding uneven values?
     float lRho = primaryCell[0];
@@ -447,6 +461,8 @@ void clusterCells (int totalNumberCells, float rhoStep, int numRho, Vec2f primar
     // may or may not lie.
     // This is done to catch outliers, i.e. capital letter components whose centroids might not be
     // in line with the small letters in the same word by improving the guess for the rho resolution.
-    for(int z = rhoclst_start; z <= rhoclst_end; z+=rhoStep)
+    clusterLines->clear();
+
+    for(double z = rhoclst_start; z <= rhoclst_end; z+=rhoStep)
         clusterLines->push_back(Vec2f(z, lTheta));
 }

@@ -17,9 +17,16 @@ int main (int argc, char** argv)
     Mat original, *output;
     vector<ConnectedComponent> components;
 
-    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer_2.png", CV_LOAD_IMAGE_COLOR);
+    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer_2.png", CV_LOAD_IMAGE_COLOR);
     //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/peter.png", CV_LOAD_IMAGE_COLOR);
-    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/thintest2.png", CV_LOAD_IMAGE_COLOR);
+    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/texttest.png", CV_LOAD_IMAGE_COLOR);
+
+
+    if(!original.data)
+    {
+        cout << "The image couldn't be loaded. Maybe the file name was wrong?\n";
+        return -1;
+    }
 
     output = new Mat(original.rows, original.cols, CV_8U); // output matrix
     vector<Point2i> corners;
@@ -33,13 +40,13 @@ int main (int argc, char** argv)
     Vec3b thresholds = Vec3b(180, 180, 180);
 
     getBlackLayer(thresholds, original, output);
-    //unionFindComponents(*output, &components);
-    //areaFilter(*output, &components, 10);
-    //collinearGrouping(*output, &components);
+    unionFindComponents(*output, &components);
+    areaFilter(*output, &components, 10);
+    collinearGrouping(*output, &components); // getBlackComponents needs fixing!
 
-    bitwise_not(*output, *output); // algorithm expects binary picture with black background
+    /*bitwise_not(*output, *output); // algorithm expects binary picture with black background
     // find corners; find a way to describe min distance parameter dynamically if possible!
-    thinning(*output); // skeletonize image (1px lines only)
+    //thinning(*output); // skeletonize image (1px lines only)
     goodFeaturesToTrack(*output, corners, output->cols*output->rows, 0.1, 0 );
 
 
@@ -72,7 +79,14 @@ int main (int argc, char** argv)
     }
 
     namedWindow("RECONSTRUCTED", WINDOW_AUTOSIZE);
-    imshow("RECONSTRUCTED", reconstructed);
+    imshow("RECONSTRUCTED", reconstructed);*/
+
+    //vector<Vec2f> line (0,0);
+    //line.insert(line.begin(), Vec2f(50, 0.785398));
+    //drawLines(line, output, Scalar(0, 255, 0));
+
+    //namedWindow("linetest", WINDOW_AUTOSIZE);
+    //imshow("linetest", *output);
 
 
     waitKey(0);
