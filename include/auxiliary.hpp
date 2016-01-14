@@ -8,6 +8,7 @@
 
 cv::Vec2i pointToVec (cv::Point p);
 std::vector<cv::Vec2i> pointToVec (std::vector<cv::Point> pl);
+void mapHoughToImage (int rows, int cols, float theta, float rho, int numAngle, int numRho, int* accumulator);
 
 void getBlackLayer(cv::Vec3b thresholds, cv::Mat input, cv::Mat* output);
 bool isBlack (uchar check);

@@ -6,12 +6,13 @@
 
 #include "include/auxiliary.hpp"
 #include "include/colorconversions.hpp"
+#include "include/customhoughtransform.hpp"
 
 using namespace std;
 using namespace cv;
 
-// Performs collinear grouping of potential characters
-// via Hough (line) transformation on the MBR centroids of all components
+// Performs collinear grouping and deletion of potential characters
+// via Hough transformation on the MBR centroids of all components.
 //
 // Explained in "A Robust Algorithm for Text String Separation from
 // Mixed Text/Graphics Images" by L. Fletcher and R. Kasturi
@@ -25,7 +26,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     // Hough transform on centroids only
     Mat hough = Mat(rows, cols, CV_8U);
 
-    // set entire matrix to background color (= black, because hough expects edges in white)
+    // set entire matrix to background color (= black, because hough expects edges to be white)
     for(int i = 0; i < rows; i++)
         for(int j = 0; j < cols; j++)
             hough.at<uchar>(i, j) = 0;
@@ -49,7 +50,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     // calculate average height of all components
     avgheight /= comps->size();
 
-    float guess_factor = 0.2 * avgheight;
+    float guess_factor = 0.2 * avgheight; // Initial guess for the rho resolution
     float rho = guess_factor; // set rho step (the polar line distance value resolution) to initial guess
     float theta = 0.0174533; // set theta (vector angle) resolution in radians
     int threshold = 20; // values in Hough accumulator have to exceed this value to be accepted
@@ -57,36 +58,40 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     int numRho = cvRound(((cols + rows) * 2 + 1) / rho); // number of rho steps
     int counter = 0; // when this becomes 2, the algorithm stops.
 
-    int* accumulator = new int[(numAngle+2) * (numRho+2)]; // accumulator matrix being used in all hough transformations hereafter
+    int* accumulator = new int[(numAngle+2) * (numRho+2)]; // accumulator matrix to pass to HoughLinesCustom to retain accum information
     memset(accumulator, 0, (sizeof(int) * (numAngle+2) * (numRho+2)));
 
     vector<Vec2f> tempLines (0,0); // for temporary storage after a Hough transformation.
     vector<Vec2f> lines (0, 0); // will contain all found lines
+    vector<Vec2i> allContributions (0, 0); // stores (numrho, numangle) tuples for a line in "lines "at the same position
+
 
     // Do multiple hough transforms using the same accumulator while limiting
     // the angle of the lines to 0° - 5°, 85° - 95° and 175° - 180° respectively
     // to find all vertically or horizontally aligned components
-    HoughLines(hough, tempLines, rho, theta, 0, 0, threshold, 0.0, 0.0872665);
-    lines.insert(lines.end(), tempLines.begin(), tempLines.end());
+    HoughLinesCustom(hough, rho, theta, 0.0, 0.0872665, accumulator);
+    HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0.0, threshold, &lines, &allContributions, THRESH_GT);
 
-    HoughLines(hough, tempLines, rho, theta, 0, 0, threshold, 1.48353, 1.65806);
-    lines.insert(lines.end(), tempLines.begin(), tempLines.end());
+    HoughLinesCustom(hough, rho, theta, 1.48353, 1.65806, accumulator);
+    HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 1.48353, threshold, &lines, &allContributions, THRESH_GT);
 
-    HoughLines(hough, tempLines, rho, theta, 0, 0, threshold, 3.05433, 3.14159);
-    lines.insert(lines.end(), tempLines.begin(), tempLines.end());
+    //HoughLinesCustom(hough, rho, theta, threshold, tempLines, cols*rows, 3.05433, 3.14159, accumulator);
+    //lines.insert(lines.end(), tempLines.begin(), tempLines.end());
+
     cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
 
     // Matrix for showing component's clustering
-    Mat clusters = hough.clone();
-    cvtColor(clusters, clusters, CV_GRAY2RGB);
+    //Mat clusters = hough.clone();
+    //cvtColor(clusters, clusters, CV_GRAY2RGB);
 
     // show hough lines
     drawLines(lines, &showHough, Scalar(0, 255, 0));
-
+    drawLines(lines, &hough, Scalar(255, 0, 0));
 
     vector<Vec2f> clusterLines; // lines parallel to the initial line
     vector<ConnectedComponent> cluster; // components that lie on clusterLines
     vector<vector<ConnectedComponent>> cluster_id (1); // keeps track of which component is part of what cluster
+    vector<Vec2f> clusterContributions; // all accumulator positions of lines that lead to the clustering, TBD
 
     avgheight = 0.; // Reset average height
     int clusterNo = 0;
@@ -96,9 +101,6 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     {
         while (threshold > 2)
         {
-            // show hough lines in red
-            drawLines(lines, &showHough, Scalar(0, 0, 255));
-
             // PAPER STEPS 4-10: for all INITIAL LINES
             for (vector<Vec2f>::iterator houghLine = lines.begin(); houghLine != lines.end(); houghLine++)
             {
@@ -157,19 +159,9 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                     // DELETE HERE
                     //eraseComponentPixels(*clusComp, &hough);
 
-
-                    // 10) Refresh the accumulator by deleting the contributions made by
-                    // each deleted component.
-                    /*for(int n = 0; n < numAngle; n++ )
-                    {
-                        // calculate line set cells
-                        // for the lines passing through the centroid
-                        int r = cvRound( cen[0] * cos(n * theta) + cen[1] * sin(n * theta));
-                        r += (numRho - 1) / 2;
-
-                        // remove contributed value from cell
-                        accumulator[(n+1) * (numRho+2) + r+1]--;
-                    }*/
+                    // delete those values from the accumulator which were contributed
+                    // to it by components in the deleted cluster
+                    //deleteLineContributions (accumulator, numAngle, allContributions);
                 }
 
                 //cout << "CLUSTER SIZE: " << cluster.size() << "\n\n";
@@ -189,52 +181,69 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
             // decrement accumulator threshold
             threshold--;
 
-            // add all accumulator cells that can be
-            // admitted because they now meet the new, lower threshold
-            // --------------------------------------------------------
-
-            // if this is the first pass
+            // if this is the first pass (= nearly horizontal and vertical line detection)
             if(counter == 0)
             {
-                // no way yet to simply grab lines with a lower threshold
-                // IDEA: custom hough adds its accumulator to supplied matrix
-                lines.clear();
+                // extract all lines that now exactly meet the threshold
+                // (they were lower than the previous threshold, and can now be admitted)
+                HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, &allContributions, THRESH_EQ);
+                HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 1.48353, threshold, &lines, &allContributions, THRESH_EQ);
 
-                HoughLines(hough, tempLines, rho, theta, 0, 0, threshold, 0.0, 0.0872665);
-                lines.insert(lines.end(), tempLines.begin(), tempLines.end());
+                cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
+            }
 
-                HoughLines(hough, tempLines, rho, theta, 0, 0, threshold, 1.48353, 1.65806);
-                lines.insert(lines.end(), tempLines.begin(), tempLines.end());
-
-                HoughLines(hough, tempLines, rho, theta, 0, 0, threshold, 3.05433, 3.14159);
-                lines.insert(lines.end(), tempLines.begin(), tempLines.end());
+            // if this is the second pass (0 - 180°)
+            else
+            {
+                HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, &allContributions, THRESH_EQ);
 
                 cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
             }
         }
 
-        // if this is the first pass
+        // first pass is done
         if(counter == 0)
         {
+            // show post-first pass (vertical/horizontal) hough lines in blue
+            drawLines(lines, &showHough, Scalar(255, 0, 0));
+            drawLines(lines, &hough, Scalar(255, 0, 0));
+
+            // debug: map hough space to image
+            //mapHoughToImage (rows, cols, theta, rho, numAngle, numRho, accumulator);
+
+            // clear extracted lines and accumulator
             lines.clear();
+            memset(accumulator, 0, (sizeof(int) * (numAngle+2) * (numRho+2)));
 
             // reset threshold
             threshold = 20;
 
+
+            cout << "\n --------- SECOND PASS. ---------- \n";
             // calculate hough domain for lines with angles [0°, 180°]
-            cout << "\n --------- LAST ITERATION. ---------- \n";
-            HoughLines(hough, tempLines, rho, theta, 0, 0, threshold, 0., 3.14159);
-            lines.insert(lines.end(), tempLines.begin(), tempLines.end());
+            HoughLinesCustom(hough, rho, theta, 0., 3.14159, accumulator);
+            HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, &allContributions, THRESH_GT);
+
             cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
 
             // do one last iteration
+            counter++;
+        }
+
+        // second pass done, end algorithm
+        else
+        {
+            // show all 0 - 180° hough lines in red
+            drawLines(lines, &showHough, Scalar(0, 0, 255));
+            drawLines(lines, &hough, Scalar(255, 0, 0));
+
             counter++;
         }
     }
 
 
 
-    int ct = 0;
+    /*int ct = 0;
     // color-code component allegiance
     for(auto iter = comps->begin(); iter != comps->end(); iter++)
         for(auto cluster = cluster_id.begin(); cluster != cluster_id.end(); cluster++)
@@ -254,15 +263,19 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
             //cout << "\n";
             ct++;
-        }
+        }*/
 
 
-    // show hough lines
-    namedWindow("HOUGH", WINDOW_AUTOSIZE);
-    imshow("HOUGH", showHough);
+    // show hough lines overlayed on image
+    namedWindow("HOUGH+IMAGE", WINDOW_AUTOSIZE);
+    imshow("HOUGH+IMAGE", showHough);
+
+    // show hough lines on component centroids
+    namedWindow("HOUGH+CENTROIDS", WINDOW_AUTOSIZE);
+    imshow("HOUGH+CENTROIDS", hough);
 
     // show clustering
-    imshow("CLUSTER", clusters);
+    //imshow("CLUSTER", clusters);
 
     // cleanup
     delete [] accumulator;

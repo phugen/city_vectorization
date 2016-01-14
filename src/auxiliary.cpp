@@ -145,6 +145,56 @@ vector<Vec2i> pointToVec (vector<Point> pl)
     return ret;
 }
 
+// Maps Hough accumulator values to the pixel constraints of an image.
+void mapHoughToImage (int rows, int cols, float theta, float rho, int numAngle, int numRho, int* accumulator)
+{
+    Mat overlay = Mat(rows, cols, CV_8U);
+    overlay.setTo(0);
+
+    int minacc = INT_MAX;
+    int maxacc = 0;
+
+    // re-usable cosine and sine values.
+    float cos_v[numAngle];
+    float sin_v[numAngle];
+
+    for (int i = 0; i < numAngle; i++)
+    {
+        cos_v[i] = cos(i * theta);
+        sin_v[i] = sin(i * theta);
+    }
+
+    // find min/max accum value
+    for( int i = 0; i < rows; i++ )
+        for( int j = 0; j < cols; j++ )
+            for( int n = 0; n < numAngle; n++ )
+            {
+                int r = cvRound( j * cos_v[n] + i * sin_v[n] );
+                r += (numRho - 1) / 2;
+
+                int value = accumulator[(n+1) * (numRho+2) + r+1];
+                minacc = min(value, minacc);
+                maxacc = max(value, maxacc);
+            }
+
+    cout << minacc << ", " << maxacc << "\n";
+
+    // normalize to 0 - 255 based on min and max values
+    for( int i = 0; i < rows; i++ )
+        for( int j = 0; j < cols; j++ )
+            for(int n = 0; n < numAngle; n++ )
+            {
+                int r = cvRound( j * cos(n * theta) + i * sin(n * theta) );
+                r += (numRho - 1) / 2;
+
+                int value = accumulator[(n+1) * (numRho+2) + r+1];
+                overlay.at<uchar>(i, j) = (255 * (value - minacc)) / (maxacc - minacc);
+            }
+
+    namedWindow("OVERLAY", WINDOW_AUTOSIZE);
+    imshow("OVERLAY", overlay);
+}
+
 // Returns all corner pixels that are reachable from the input
 // CORNER PIXEL(!). It is expected that the input pixel is not in the
 // corner input vector.
@@ -372,12 +422,24 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
         double xi = rho * cos(theta);
         double yi = rho * sin(theta);
 
-        // Find the slope of the line through (0,0) and the
+        // Find the slope of the line through the origin (0,0) and the
         // converted intersection point (rho, theta).
         // This line is perpendicular, so its slope is the inverse of
         // the origin line: m_new = (-1/m).
-        // Check if xi is 0, since otherwise the slope will be undefined!
-        double m; xi == 0 ? m = -1. / INT_MAX : m = -1. / ((yi - 0) / (xi - 0));
+        // Check if xi or yi are 0, since if so the slope will be infinite (NaN)!
+        double m;
+
+        // vertical line
+        if (xi == 0)
+            m = INT_MAX;
+
+        // horizontal line
+        else if (yi == 0)
+            m = 0;
+
+        // normal slope
+        else
+            m = -1. / ((yi - 0) / (xi - 0));
 
         // Since the intersection point (x, y) is known, we can now
         // solve the line equation y = m*x + b for b: b = -(m*x) + y
@@ -389,6 +451,9 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
 
         // choose line color automatically based on range (0, size_of_list)
         //Scalar color = intToRGB(Vec2i(0, lines.size()), i);
+
+        if(lines.size() > 40)
+            //cout << pt1 << " to " << pt2 << "\n";
 
         line(*image, pt1, pt2, color, 1);
     }
