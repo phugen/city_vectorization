@@ -6,6 +6,7 @@
 #include "include/zhangsuen.hpp"
 
 #include <iostream>
+#include <algorithm>
 
 
 using namespace std;
@@ -17,9 +18,9 @@ int main (int argc, char** argv)
     Mat original, *output;
     vector<ConnectedComponent> components;
 
-    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer_2.png", CV_LOAD_IMAGE_COLOR);
+    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/BLACK.png", CV_LOAD_IMAGE_COLOR);
     //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/peter.png", CV_LOAD_IMAGE_COLOR);
-    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/texttest.png", CV_LOAD_IMAGE_COLOR);
+    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_leicht.png", CV_LOAD_IMAGE_COLOR);
 
 
     if(!original.data)
@@ -41,8 +42,10 @@ int main (int argc, char** argv)
 
     getBlackLayer(thresholds, original, output);
     unionFindComponents(*output, &components);
-    areaFilter(*output, &components, 10);
-    collinearGrouping(*output, &components); // getBlackComponents needs fixing!
+    //areaFilter(*output, &components, 10);
+    //collinearGrouping(*output, &components); // getBlackComponents needs fixing!
+
+    eraseComponentPixels(components.at(0), output);
 
     /*bitwise_not(*output, *output); // algorithm expects binary picture with black background
     // find corners; find a way to describe min distance parameter dynamically if possible!

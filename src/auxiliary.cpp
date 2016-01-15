@@ -6,7 +6,7 @@
 #include "include/colorconversions.hpp"
 #include "include/connectedcomponent.hpp"
 
-#include <queue>
+#include <stack>
 #include <list>
 #include <algorithm>
 #include <iostream>
@@ -20,111 +20,113 @@ using namespace cv;
     return((check[0] == 0) && (check[1] == 0) && (check[2] == 0));
 }*/
 
-// checks if a pixel is purely blac
+// checks if a pixel is purely black
 bool isBlack (uchar check)
 {
     return (check == 0);
 }
 
-// Returns a list of all eight-connected neighbors
+// Returns a list of all black eight-connected neighbors
 // of the input pixel.
 //
 // DON'T mistake this for the check in unionfindcomponents.cpp, which
-// operates in a scanline fashion plus checks for black pixels, and thus
+// operates in a scanline fashion, and thus
 // gives different neighbors for a pixel.
-vector<Vec2i> eightConnectedNeighbors(Vec2i pixel, Mat* image)
+vector<Vec2i> eightConnectedBlackNeighbors(Vec2i pixel, Mat* image)
 {
     vector<Vec2i> neighbors; // output list
-    int cols = image->cols;
     int rows = image->rows;
-    int i = pixel[0];
-    int j = pixel[1];
+    int cols = image->cols;
+
+    int i = pixel[0]; // rows
+    int j = pixel[1]; // cols
+
 
     // top left pixel
     if(i == 0 && j == 0)
     {
-        neighbors.push_back(Vec2i(i+1, j));
-        neighbors.push_back(Vec2i(i+1, j+1));
-        neighbors.push_back(Vec2i(i, j+1));
+        if(image->at<uchar>(i+1, j) == 0) neighbors.push_back(Vec2i(i+1, j));
+        if(image->at<uchar>(i+1, j+1) == 0) neighbors.push_back(Vec2i(i+1, j+1));
+        if(image->at<uchar>(i, j+1) == 0) neighbors.push_back(Vec2i(i, j+1));
     }
 
     // top right pixel
     else if(i == 0 && j == (cols - 1))
     {
-        neighbors.push_back(Vec2i(i+1, j));
-        neighbors.push_back(Vec2i(i+1, j-1));
-        neighbors.push_back(Vec2i(i, j-1));
+        if(image->at<uchar>(i+1, j) == 0) neighbors.push_back(Vec2i(i+1, j));
+        if(image->at<uchar>(i+1, j-1) == 0) neighbors.push_back(Vec2i(i+1, j-1));
+        if(image->at<uchar>(i, j-1) == 0) neighbors.push_back(Vec2i(i, j-1));
     }
 
 
     // bottom left pixel
     else if (i == (rows - 1) && j == 0)
     {
-        neighbors.push_back(Vec2i(i, j+1));
-        neighbors.push_back(Vec2i(i-1, j+1));
-        neighbors.push_back(Vec2i(i-1, j));
+        if(image->at<uchar>(i, j+1) == 0) neighbors.push_back(Vec2i(i, j+1));
+        if(image->at<uchar>(i-1, j+1) == 0) neighbors.push_back(Vec2i(i-1, j+1));
+        if(image->at<uchar>(i-1, j) == 0) neighbors.push_back(Vec2i(i-1, j));
     }
 
     // bottom right pixel
     else if (i == (rows - 1) && j == (cols - 1))
     {
-        neighbors.push_back(Vec2i(i-1, j));
-        neighbors.push_back(Vec2i(i-1, j-1));
-        neighbors.push_back(Vec2i(i, j-1));
+        if(image->at<uchar>(i-1, j) == 0) neighbors.push_back(Vec2i(i-1, j));
+        if(image->at<uchar>(i-1, j-1) == 0) neighbors.push_back(Vec2i(i-1, j-1));
+        if(image->at<uchar>(i, j-1) == 0) neighbors.push_back(Vec2i(i, j-1));
     }
 
     // upper border
     else if (i == 0)
     {
-        neighbors.push_back(Vec2i(i, j+1));
-        neighbors.push_back(Vec2i(i-1, j+1));
-        neighbors.push_back(Vec2i(i-1, j));
-        neighbors.push_back(Vec2i(i-1, j-1));
-        neighbors.push_back(Vec2i(i, j-1));
+        if(image->at<uchar>(i, j+1) == 0) neighbors.push_back(Vec2i(i, j+1));
+        if(image->at<uchar>(i+1, j+1) == 0) neighbors.push_back(Vec2i(i+1, j+1));
+        if(image->at<uchar>(i+1, j) == 0) neighbors.push_back(Vec2i(i+1, j));
+        if(image->at<uchar>(i+1, j-1) == 0) neighbors.push_back(Vec2i(i+1, j-1));
+        if(image->at<uchar>(i, j-1) == 0) neighbors.push_back(Vec2i(i, j-1));
     }
 
     // left border
     else if (j == 0)
     {
-        neighbors.push_back(Vec2i(i-1, j));
-        neighbors.push_back(Vec2i(i-1, j+1));
-        neighbors.push_back(Vec2i(i, j+1));
-        neighbors.push_back(Vec2i(i+1, j+1));
-        neighbors.push_back(Vec2i(i+1, j));
+        if(image->at<uchar>(i-1, j) == 0) neighbors.push_back(Vec2i(i-1, j));
+        if(image->at<uchar>(i-1, j+1) == 0) neighbors.push_back(Vec2i(i-1, j+1));
+        if(image->at<uchar>(i, j+1) == 0) neighbors.push_back(Vec2i(i, j+1));
+        if(image->at<uchar>(i+1, j+1) == 0) neighbors.push_back(Vec2i(i+1, j+1));
+        if(image->at<uchar>(i+1, j) == 0) neighbors.push_back(Vec2i(i+1, j));
     }
 
     // right border
     else if (j == (cols - 1))
     {
-        neighbors.push_back(Vec2i(i-1, j));
-        neighbors.push_back(Vec2i(i+1, j));
-        neighbors.push_back(Vec2i(i+1, j-1));
-        neighbors.push_back(Vec2i(i, j-1));
-        neighbors.push_back(Vec2i(i-1, j-1));
+        if(image->at<uchar>(i-1, j) == 0) neighbors.push_back(Vec2i(i-1, j));
+        if(image->at<uchar>(i+1, j) == 0) neighbors.push_back(Vec2i(i+1, j));
+        if(image->at<uchar>(i+1, j-1) == 0) neighbors.push_back(Vec2i(i+1, j-1));
+        if(image->at<uchar>(i, j-1) == 0) neighbors.push_back(Vec2i(i, j-1));
+        if(image->at<uchar>(i-1, j-1) == 0) neighbors.push_back(Vec2i(i-1, j-1));
     }
 
     // lower border
     else if (i == (rows - 1))
     {
-        neighbors.push_back(Vec2i(i, j-1));
-        neighbors.push_back(Vec2i(i-1, j-1));
-        neighbors.push_back(Vec2i(i-1, j));
-        neighbors.push_back(Vec2i(i-1, j+1));
-        neighbors.push_back(Vec2i(i, j+1));
+        if(image->at<uchar>(i, j-1) == 0) neighbors.push_back(Vec2i(i, j-1));
+        if(image->at<uchar>(i-1, j-1) == 0) neighbors.push_back(Vec2i(i-1, j-1));
+        if(image->at<uchar>(i-1, j) == 0) neighbors.push_back(Vec2i(i-1, j));
+        if(image->at<uchar>(i-1, j+1) == 0) neighbors.push_back(Vec2i(i-1, j+1));
+        if(image->at<uchar>(i, j+1) == 0) neighbors.push_back(Vec2i(i, j+1));
     }
 
     // Normal case - pixel is somewhere
     // in the image, but not near any border.
     else
     {
-        neighbors.push_back(Vec2i(i-1, j));
-        neighbors.push_back(Vec2i(i-1, j+1));
-        neighbors.push_back(Vec2i(i, j+1));
-        neighbors.push_back(Vec2i(i+1, j+1));
-        neighbors.push_back(Vec2i(i+1, j));
-        neighbors.push_back(Vec2i(i+1, j-1));
-        neighbors.push_back(Vec2i(i, j-1));
-        neighbors.push_back(Vec2i(i-1, j-1));
+        if(image->at<uchar>(i-1, j) == 0) neighbors.push_back(Vec2i(i-1, j));
+        if(image->at<uchar>(i-1, j+1) == 0) neighbors.push_back(Vec2i(i-1, j+1));
+        if(image->at<uchar>(i, j+1) == 0) neighbors.push_back(Vec2i(i, j+1));
+        if(image->at<uchar>(i+1, j+1) == 0) neighbors.push_back(Vec2i(i+1, j+1));
+        if(image->at<uchar>(i+1, j) == 0) neighbors.push_back(Vec2i(i+1, j));
+        if(image->at<uchar>(i+1, j-1) == 0) neighbors.push_back(Vec2i(i+1, j-1));
+        if(image->at<uchar>(i, j-1) == 0) neighbors.push_back(Vec2i(i, j-1));
+        if(image->at<uchar>(i-1, j-1) == 0) neighbors.push_back(Vec2i(i-1, j-1));
     }
 
     return neighbors;
@@ -177,8 +179,6 @@ void mapHoughToImage (int rows, int cols, float theta, float rho, int numAngle, 
                 maxacc = max(value, maxacc);
             }
 
-    cout << minacc << ", " << maxacc << "\n";
-
     // normalize to 0 - 255 based on min and max values
     for( int i = 0; i < rows; i++ )
         for( int j = 0; j < cols; j++ )
@@ -208,7 +208,7 @@ void mapHoughToImage (int rows, int cols, float theta, float rho, int numAngle, 
 // are only one pixel wide.
 //
 // Since the code is very similiar, see getBlackComponentPixels for code commentary.
-vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image, Mat* reconstructed)
+/*vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image, Mat* reconstructed)
 {
     queue<Vec2i> active;
     vector<Vec2i> found;
@@ -219,7 +219,7 @@ vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image, 
     namedWindow("nearest", WINDOW_AUTOSIZE);
 
 
-    if(!isBlack(image->at<uchar>(pixel[1], pixel[0])))
+    if(!isBlack(image->at<uchar>(pixel[0], pixel[1])))
         return corners_reachable;
 
     else
@@ -231,12 +231,11 @@ vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image, 
         while (!active.empty())
         {
             Vec2i current = active.front();
-            vector<Vec2i> currentNeighbors = eightConnectedNeighbors(current, image);
+            vector<Vec2i> currentNeighbors = eightConnectedBlackNeighbors(current, image);
 
-            for(vector<Vec2i>::iterator neighbor = currentNeighbors.begin(); neighbor != currentNeighbors.end(); neighbor++)
+            for(auto neighbor = currentNeighbors.begin(); neighbor != currentNeighbors.end(); neighbor++)
             {
-                if((find(found.begin(), found.end(), *neighbor) == found.end()) &&
-                        isBlack(image->at<uchar>(((*neighbor)[1]), (*neighbor)[0])))
+                if(find(found.begin(), found.end(), *neighbor) == found.end())
                 {
                     // neighbor is a corner
                     if(find(corners.begin(), corners.end(), *neighbor) != corners.end())
@@ -244,7 +243,7 @@ vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image, 
                         corners_reachable.push_back(*neighbor);
                         found.push_back(*neighbor);
 
-                        Point p = Point((*neighbor)[1], (*neighbor)[0]);
+                        Point p = Point((*neighbor)[0], (*neighbor)[1]);
                         rectangle(test, p, p, Scalar(255, 0, 0), 1, 8, 0);
                         //imshow("nearest", test);
 
@@ -273,81 +272,99 @@ vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image, 
         cout << "#Corners reachable: " << corners_reachable.size() << "\n";
         return corners_reachable;
     }
-}
+}*/
 
 // Returns all black pixels that can be reached
-// from the input pixel, including the pixel itself.
-// Expects a greyscale matrix.
+// from the input pixel, including the pixel itself (DFS).
+// Expects a binary (CV_U8 / CV_U8C1) matrix.
 vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
-{
-    queue<Vec2i> active; // queue for new, unexpanded nodes
-    vector<Vec2i> found; // list for expanded nodes
-    vector<Vec2i> connected; // output list
+{   
+    stack<Vec2i>* active = new stack<Vec2i>; // stack for new, unexpanded nodes
+    vector<Vec2i>* found = new vector<Vec2i>; // list for expanded nodes
+    vector<Vec2i>* connected = new vector<Vec2i>; // output list
+    vector<Vec2i> currentBlackNeighbors; // contains all black neighbors of current
+    Vec2i current; // pixel that is currently being evaluated
 
-    if(image->channels() > 1)
+    if(image->type() != 0)
     {
         cout << "blackNeighbors: Matrix had " << image->channels() << " channels instead of 1!" << "\n";
-        return connected;
+        return *connected;
     }
 
     // if starting point is not black
     // return empty list
-    if(!isBlack(image->at<uchar>(pixel[1], pixel[0])))
-        return connected;
+    if(!isBlack(image->at<uchar>(pixel[0], pixel[1])))
+        return *connected;
 
     else
     {
         // add start pixel to open set and output
-        active.push(pixel);
-        connected.push_back(pixel);
-        found.push_back(pixel);
+        // found->push_back(pixel);
+        active->push(pixel);
+
+        if(pixel == Vec2i(78, 685))
+            cout << pixel << "\n";
 
         // search neighbors while
         // there are still unexpanded pixels
-        while (!active.empty())
+        while (!active->empty())
         {
-            // take next unexpanded node
-            Vec2i current = active.front();
+            // Set the current pixel to the top pixel in the
+            // stack and pop that pixel from the stack.
+            current = active->top();
+            active->pop();
 
-            // retrieve all neighbors for the current pixel
-            vector<Vec2i> currentNeighbors = eightConnectedNeighbors(current, image);
-
-            // look at black neighbors
-            // if they haven't been expanded yet (= that are not in the "found" list)
-            for(vector<Vec2i>::iterator neighbor = currentNeighbors.begin(); neighbor != currentNeighbors.end(); neighbor++)
+            // if active pixel hasn't been found yet
+            if(find(found->begin(), found->end(), current) == found->end())
             {
-                if((find(found.begin(), found.end(), *neighbor) == found.end()) &&
-                        isBlack(image->at<uchar>(((*neighbor)[1]), (*neighbor)[0])))
-                {
-                    connected.push_back(*neighbor);
-                    active.push(*neighbor);
-                    found.push_back(*neighbor); // mark as found
-                }
+                // mark current as found
+                found->push_back(current);
+
+                // add current to output list
+                connected->push_back(current);
+
+                // retrieve all neighbors for the current pixel
+                currentBlackNeighbors = eightConnectedBlackNeighbors(current, image);
+
+                // add all black neighbors to the active stack
+                for(auto neighbor = currentBlackNeighbors.begin(); neighbor != currentBlackNeighbors.end(); neighbor++)
+                    if(find(found->begin(), found->end(), *neighbor) == found->end())
+                        active->push(*neighbor);
             }
 
-            // erase current pixel from active set
-            // and make the next pixel the current pixel
-            active.pop();
+            if(active->size() % 100 == 0)
+                cout << "SIZE: " << active->size() << "\n";
         }
 
-        cout << "#Black component pixels: " << connected.size() << "\n";
-        return connected;
+
+        vector<Vec2i> ret = *connected;
+
+        // cleanup
+        //delete connected;
+        //delete active;
+        //delete found;
+
+        return ret;
     }
 }
 
 // Erase all black pixels that belong to a component.
-// TODO: Swap "seed" for Component object.
 void eraseComponentPixels (ConnectedComponent comp, Mat* image)
 {
+    cout << "TO DELETE: " << comp.numPixels << "\n";
+
+    if(comp.numPixels == 2279)
+        cout << "";
+
     Vec2i seed = comp.seed;
 
     // check if seed is out of bounds
-    if(seed[0] < 0 || seed[0] > image->cols ||
-            seed[1] < 0 || seed[1] > image->rows)
+    if(seed[0] < 0 || seed[0] > image->rows ||
+            seed[1] < 0 || seed[1] > image->cols)
     {
         cout << "eraseComponentPixels: Seed of bounds!\n";
         cout << "Image was " << image->rows << ", " << image->cols << " (rows, cols)\n";
-        cout << "Seed was " << seed[1] << ", " << seed[0] << "\n";
+        cout << "Seed was " << seed[0] << ", " << seed[1] << "\n";
 
         return;
     }
@@ -357,9 +374,13 @@ void eraseComponentPixels (ConnectedComponent comp, Mat* image)
 
     // swap all black component pixels for white ones
     for(vector<Vec2i>::iterator pixel = pixels.begin(); pixel != pixels.end(); pixel++)
-        (*image).at<uchar>((*pixel)[1], (*pixel)[0]) = 255;
+    {
+        if((*pixel)[0] < 0  || (*pixel)[0] > image->rows ||
+           (*pixel)[1] < 0  || (*pixel)[1] > image->cols)
+                cout << "DELETING PX AT: " << (*pixel)[0] << ", " << (*pixel)[1] << "\n";
 
-    cout << "DONE" << "\n";
+        (*image).at<uchar>((*pixel)[0], (*pixel)[1]) = 255;
+    }
 }
 
 /**
@@ -371,11 +392,10 @@ void eraseComponentPixels (ConnectedComponent comp, Mat* image)
  */
 void getBlackLayer(Vec3b thresholds, Mat input, Mat* output)
 {
-    for(int i = 0; i < input.cols; i++)
-    {
-        for(int j = 0; j < input.rows; j++)
+    for(int i = 0; i < input.rows; i++)
+        for(int j = 0; j < input.cols; j++)
         {
-            Vec3b currentPixel = input.at<Vec3b>(j, i);
+            Vec3b currentPixel = input.at<Vec3b>(i, j);
 
             // check thresholds (Vec3b is BGR!)
             if(currentPixel[0] <= thresholds[0] &&
@@ -383,17 +403,17 @@ void getBlackLayer(Vec3b thresholds, Mat input, Mat* output)
                     currentPixel[2] <= thresholds[2])
             {
                 // pixel below all thresholds: make it black
-                output->at<uchar>(j, i) = 0;
+                output->at<uchar>(i, j) = 0;
             }
 
             // else: make pixel white
             else
-                output->at<uchar>(j, i) = 255;
+                output->at<uchar>(i, j) = 255;
         }
-    }
 
     namedWindow("black layer", WINDOW_AUTOSIZE);
     imshow("black layer", *output);
+    imwrite("BLACK.png", *output );
 }
 
 
@@ -452,9 +472,6 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
         // choose line color automatically based on range (0, size_of_list)
         //Scalar color = intToRGB(Vec2i(0, lines.size()), i);
 
-        if(lines.size() > 40)
-            //cout << pt1 << " to " << pt2 << "\n";
-
         line(*image, pt1, pt2, color, 1);
     }
 }
@@ -465,8 +482,8 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
 bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance)
 {
     // cartesian coordinates of the point
-    double x = point[0];
-    double y = point[1];
+    double x = point[1];
+    double y = point[0];
 
     // convert polar line pair (rho, theta)
     // to cartesian coordinates (x, y) - the point

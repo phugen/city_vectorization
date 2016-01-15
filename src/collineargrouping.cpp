@@ -24,28 +24,31 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
     // create new matrix for performing
     // Hough transform on centroids only
-    Mat hough = Mat(rows, cols, CV_8U);
+    Mat hough_8U = Mat(rows, cols, CV_8U);
 
     // set entire matrix to background color (= black, because hough expects edges to be white)
     for(int i = 0; i < rows; i++)
         for(int j = 0; j < cols; j++)
-            hough.at<uchar>(i, j) = 0;
+            hough_8U.at<uchar>(i, j) = 0;
 
     // extract centroids of connected components
     for (vector<ConnectedComponent>::iterator iter = comps->begin(); iter != comps->end(); iter++)
     {
         ConnectedComponent curr = *iter;
 
-        hough.at<uchar>(curr.centroid[0], curr.centroid[1]) = 255; // mark centroid as white in Hough matrix
+        hough_8U.at<uchar>(curr.centroid[0], curr.centroid[1]) = 255; // mark centroid as white in Hough matrix
         avgheight += curr.mbr_max[0] - curr.mbr_min[0]; // cumulative height of all components
     }
 
     namedWindow("CENTROIDS", WINDOW_AUTOSIZE);
-    imshow("CENTROIDS", hough);
+    imshow("CENTROIDS", hough_8U);
 
     // output matrix for showing found lines
     Mat showHough;
     cvtColor(input, showHough, CV_GRAY2RGB);
+
+    // final output matrix
+    Mat erased = input.clone();
 
     // calculate average height of all components
     avgheight /= comps->size();
@@ -61,7 +64,6 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     int* accumulator = new int[(numAngle+2) * (numRho+2)]; // accumulator matrix to pass to HoughLinesCustom to retain accum information
     memset(accumulator, 0, (sizeof(int) * (numAngle+2) * (numRho+2)));
 
-    vector<Vec2f> tempLines (0,0); // for temporary storage after a Hough transformation.
     vector<Vec2f> lines (0, 0); // will contain all found lines
     vector<Vec2i> allContributions (0, 0); // stores (numrho, numangle) tuples for a line in "lines "at the same position
 
@@ -69,10 +71,10 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     // Do multiple hough transforms using the same accumulator while limiting
     // the angle of the lines to 0° - 5°, 85° - 95° and 175° - 180° respectively
     // to find all vertically or horizontally aligned components
-    HoughLinesCustom(hough, rho, theta, 0.0, 0.0872665, accumulator);
+    HoughLinesCustom(hough_8U, rho, theta, 0.0, 0.0872665, accumulator);
     HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0.0, threshold, &lines, &allContributions, THRESH_GT);
 
-    HoughLinesCustom(hough, rho, theta, 1.48353, 1.65806, accumulator);
+    HoughLinesCustom(hough_8U, rho, theta, 1.48353, 1.65806, accumulator);
     HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 1.48353, threshold, &lines, &allContributions, THRESH_GT);
 
     //HoughLinesCustom(hough, rho, theta, threshold, tempLines, cols*rows, 3.05433, 3.14159, accumulator);
@@ -86,7 +88,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
     // show hough lines
     drawLines(lines, &showHough, Scalar(0, 255, 0));
-    drawLines(lines, &hough, Scalar(255, 0, 0));
+    drawLines(lines, &hough_8U, Scalar(255, 0, 0));
 
     vector<Vec2f> clusterLines; // lines parallel to the initial line
     vector<ConnectedComponent> cluster; // components that lie on clusterLines
@@ -155,14 +157,19 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 // 9) Separate strings from graphics in the cluster and delete them.
                 for(vector<ConnectedComponent>::iterator clusComp = cluster.begin(); clusComp != cluster.end(); clusComp++)
                 {
-
                     // DELETE HERE
-                    //eraseComponentPixels(*clusComp, &hough);
+                    if(cluster.size() > 3)
+                    {
+                        //cout << "seed: " << (*clusComp).seed << ", centroid: " << (*clusComp).centroid << "\n";
+                        eraseComponentPixels(*clusComp, &erased);
+                    }
 
                     // delete those values from the accumulator which were contributed
                     // to it by components in the deleted cluster
                     //deleteLineContributions (accumulator, numAngle, allContributions);
                 }
+
+                //cout << "DONE REMOVING CLUSTER" << "\n";
 
                 //cout << "CLUSTER SIZE: " << cluster.size() << "\n\n";
 
@@ -206,7 +213,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
         {
             // show post-first pass (vertical/horizontal) hough lines in blue
             drawLines(lines, &showHough, Scalar(255, 0, 0));
-            drawLines(lines, &hough, Scalar(255, 0, 0));
+            drawLines(lines, &hough_8U, Scalar(255, 0, 0));
 
             // debug: map hough space to image
             //mapHoughToImage (rows, cols, theta, rho, numAngle, numRho, accumulator);
@@ -221,8 +228,8 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
             cout << "\n --------- SECOND PASS. ---------- \n";
             // calculate hough domain for lines with angles [0°, 180°]
-            HoughLinesCustom(hough, rho, theta, 0., 3.14159, accumulator);
-            HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, &allContributions, THRESH_GT);
+            //HoughLinesCustom(hough, rho, theta, 0., 3.14159, accumulator);
+            //HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, &allContributions, THRESH_GT);
 
             cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
 
@@ -235,7 +242,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
         {
             // show all 0 - 180° hough lines in red
             drawLines(lines, &showHough, Scalar(0, 0, 255));
-            drawLines(lines, &hough, Scalar(255, 0, 0));
+            drawLines(lines, &hough_8U, Scalar(255, 0, 0));
 
             counter++;
         }
@@ -272,7 +279,11 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
     // show hough lines on component centroids
     namedWindow("HOUGH+CENTROIDS", WINDOW_AUTOSIZE);
-    imshow("HOUGH+CENTROIDS", hough);
+    imshow("HOUGH+CENTROIDS", hough_8U);
+
+    // show result
+    namedWindow("WITHOUT TEXT", WINDOW_AUTOSIZE);
+    imshow("WITHOUT TEXT", erased);
 
     // show clustering
     //imshow("CLUSTER", clusters);

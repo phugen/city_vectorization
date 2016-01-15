@@ -85,23 +85,23 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                 // top right pixel
                 else if(i == 0 && j == (cols - 1))
                 {
-                    if(isBlack(input.at<uchar>(i, j-1))) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
                 }
 
 
                 // bottom left pixel
                 else if (i == (rows - 1) && j == 0)
                 {
-                    if(isBlack(input.at<uchar>(i-1, j))) neighborPositions.push_back(Vec2i(i-1, j));
-                    if(isBlack(input.at<uchar>(i-1, j+1))) neighborPositions.push_back(Vec2i(i-1, j+1));
+                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input.at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
                 }
 
                 // bottom right pixel
                 else if (i == (rows - 1) && j == (cols - 1))
                 {
-                    if(isBlack(input.at<uchar>(i, j-1))) neighborPositions.push_back(Vec2i(i, j-1));
-                    if(isBlack(input.at<uchar>(i-1, j-1))) neighborPositions.push_back(Vec2i(i-1, j-1));
-                    if(isBlack(input.at<uchar>(i-1, j))) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input.at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
+                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
                 }
 
                 // if we were in a corner, the appropriate
@@ -111,41 +111,41 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                 // upper border
                 else if (i == 0)
                 {
-                    if(isBlack(input.at<uchar>(i, j-1))) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
                 }
 
                 // left border
                 else if (j == 0)
                 {
-                    if(isBlack(input.at<uchar>(i-1, j))) neighborPositions.push_back(Vec2i(i-1, j));
-                    if(isBlack(input.at<uchar>(i-1, j+1))) neighborPositions.push_back(Vec2i(i-1, j+1));
+                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input.at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
                 }
 
                 // right border
                 else if (j == (cols - 1))
                 {
-                    if(isBlack(input.at<uchar>(i, j-1))) neighborPositions.push_back(Vec2i(i, j-1));
-                    if(isBlack(input.at<uchar>(i-1, j-1))) neighborPositions.push_back(Vec2i(i-1, j-1));
-                    if(isBlack(input.at<uchar>(i-1, j))) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input.at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
+                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
                 }
 
                 // lower border
                 else if (i == (rows - 1))
                 {
-                    if(isBlack(input.at<uchar>(i, j-1))) neighborPositions.push_back(Vec2i(i, j-1));
-                    if(isBlack(input.at<uchar>(i-1, j-1))) neighborPositions.push_back(Vec2i(i-1, j-1));
-                    if(isBlack(input.at<uchar>(i-1, j))) neighborPositions.push_back(Vec2i(i-1, j));
-                    if(isBlack(input.at<uchar>(i-1, j+1))) neighborPositions.push_back(Vec2i(i-1, j+1));
+                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input.at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
+                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input.at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
                 }
 
                 // Normal case - pixel is somewhere
                 // in the image, but not near any border.
                 else
                 {
-                    if(isBlack(input.at<uchar>(i, j-1))) neighborPositions.push_back(Vec2i(i, j-1));
-                    if(isBlack(input.at<uchar>(i-1, j-1))) neighborPositions.push_back(Vec2i(i-1, j-1));
-                    if(isBlack(input.at<uchar>(i-1, j))) neighborPositions.push_back(Vec2i(i-1, j));
-                    if(isBlack(input.at<uchar>(i-1, j+1))) neighborPositions.push_back(Vec2i(i-1, j+1));
+                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input.at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
+                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input.at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
                 }
 
                 // if there were no black neighbors
@@ -158,7 +158,7 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                     // update label, seed and black pixel count
                     // for this label
                     labels[i * cols + j] = label;
-                    seedPerLabel[label] = Vec2i(j, i);
+                    seedPerLabel[label] = Vec2i(i, j);
                     pxPerLabel[label] = 1;
 
                     // next black pixel could be a new label
@@ -189,7 +189,7 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                     // assign smallest label to current pixel, update seed
                     // and increase black pixel counter
                     labels[i * cols + j] = minLabel;
-                    seedPerLabel[minLabel] = Vec2i(j, i);
+                    seedPerLabel[minLabel] = Vec2i(i, j);
                     pxPerLabel[minLabel] += 1;
 
                     // if the newly labelled pixel changes the MBR

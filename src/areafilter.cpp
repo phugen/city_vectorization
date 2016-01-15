@@ -22,7 +22,7 @@ void areaFilter(Mat input, vector<ConnectedComponent>* components, int ratio)
         // consider this component a non-character component
         if((ratio * x) < y || x > (ratio * y))
         {
-            eraseComponentPixels (*iter, &input);
+            //eraseComponentPixels (*iter, &input);
             iter = components->erase(iter);
         }
 
