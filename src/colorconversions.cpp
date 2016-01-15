@@ -1,3 +1,10 @@
+/**
+  * Contains functions dealing with converting color values
+  * from one color space to another.
+  *
+  * Author: Philipp Hugenroth
+  */
+
 #include "include/colorconversions.hpp"
 #include "include/opencvincludes.hpp"
 #include <iostream>

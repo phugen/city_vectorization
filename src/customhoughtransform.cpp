@@ -1,3 +1,10 @@
+/**
+  * A tweaked version of openCV's Hough line transformation function.
+  * Allows access to the accumulator and separates accumulator calculation
+  * and line extraction, while the latter can be done in multiple ways.
+  *
+  * Author: openCV (see license below) / Philipp Hugenroth
+  */
 
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
@@ -60,10 +67,6 @@ struct hough_cmp_gt
 };
 
 
-
-/** Taken from the official openCV code and altered to expose access to the accumulator
-* by adding it to the supplied "accumulator" array pointer.
-*/
 
 /*
 Here image is an input raster;

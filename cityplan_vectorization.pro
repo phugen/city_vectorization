@@ -17,7 +17,8 @@ SOURCES += \
     src/main.cpp \
     src/unionfind.cpp \
     src/unionfindcomponents.cpp \
-    src/zhangsuen.cpp
+    src/zhangsuen.cpp \
+    src/stringheuristics.cpp
 
 HEADERS += \
     include/areafilter.hpp \
@@ -29,7 +30,8 @@ HEADERS += \
     include/opencvincludes.hpp \
     include/unionfind.hpp \
     include/unionfindcomponents.hpp \
-    include/zhangsuen.hpp
+    include/zhangsuen.hpp \
+    include/stringheuristics.hpp
 
 INCLUDEPATH += "C:/opencv/build/include"
 

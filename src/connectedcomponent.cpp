@@ -1,3 +1,11 @@
+/**
+  * This class describes a connected component in a binary black/white image,
+  * e.g. a mass of black pixels in which each pixel is connected
+  * to all other pixels of the component by (indirect) eight-connection.
+  *
+  * Author: Philipp Hugenroth
+  */
+
 #include "include/connectedcomponent.hpp"
 
 using namespace std;
@@ -11,6 +19,8 @@ ConnectedComponent::ConnectedComponent(Vec2i newmin, Vec2i newmax, int newPixels
     int x = (newmin[0] + newmax[0]) / 2;
     int y = (newmin[1] + newmax[1]) / 2;
     centroid = Vec2i(x, y);
+
+    houghLine = NULL;
 
     this->seed = seed;
     numPixels = newPixels;

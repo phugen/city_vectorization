@@ -1,3 +1,12 @@
+/**
+  * Provides a means of breaking down a binary image into
+  * isolated connected components by using two-pass connected-component labeling.
+  *
+  * (https://en.wikipedia.org/wiki/Connected-component_labeling)
+  *
+  * Author: Philipp Hugenroth
+  */
+
 #include "include/unionfindcomponents.hpp"
 #include "include/unionfind.hpp"
 #include "include/auxiliary.hpp"
@@ -10,9 +19,7 @@ using namespace std;
 using namespace cv;
 
 
-// Two-pass connected-component finding.
-// (https://en.wikipedia.org/wiki/Connected-component_labeling)
-//
+
 // Expects binary picture (e.g. black layer)
 void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
 {
@@ -64,7 +71,7 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
     // equivalent and will be "translated" in the second pass.
     for (int i = 0; i < rows; i++)
         for(int j = 0; j < cols; j++)
-            if(isBlack(input.at<uchar>(i, j))) // check only black pixels
+            if(input.at<uchar>(i, j) == 0) // check only black pixels
             {
                 // reset neighbor list
                 neighborPositions.clear();

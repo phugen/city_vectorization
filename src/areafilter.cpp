@@ -1,3 +1,10 @@
+/**
+  * Implements a filter for connected component MBRs,
+  * as needed by the text extraction algorithm in "collineargrouping.cpp".
+  *
+  * Author: Philipp Hugenroth
+  */
+
 #include "include/areafilter.hpp"
 #include "include/auxiliary.hpp"
 #include <iostream>
@@ -8,7 +15,7 @@ using namespace cv;
 // Dismiss any components that have an area ratio
 // less than 1:ratio or larger than ratio:1 because they
 // are likely to not be characters.
-void areaFilter(Mat input, vector<ConnectedComponent>* components, int ratio)
+void areaFilter(vector<ConnectedComponent>* components, int ratio)
 {
     vector<ConnectedComponent>::iterator iter = components->begin();
     while (iter != components->end())
@@ -30,7 +37,7 @@ void areaFilter(Mat input, vector<ConnectedComponent>* components, int ratio)
             iter++;
     }
 
-    cout << "#Components after area filter: " << components->size() << "\n";
+    //cout << "#Components after area filter: " << components->size() << "\n";
 
     // show result
     //namedWindow("AREA FILTER", WINDOW_AUTOSIZE);

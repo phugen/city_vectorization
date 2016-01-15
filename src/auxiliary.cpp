@@ -1,6 +1,9 @@
 /**
-  Contains various helper functions.
- */
+  * Various helper functions are defined here, such as finding all
+  * eight-connected, black pixels around a specified pixel.
+  *
+  * Author: Philipp Hugenroth
+  */
 
 #include "include/auxiliary.hpp"
 #include "include/colorconversions.hpp"
@@ -14,17 +17,6 @@
 using namespace std;
 using namespace cv;
 
-// checks if a pixel is purely black
-/*bool isBlack (Vec3b check)
-{
-    return((check[0] == 0) && (check[1] == 0) && (check[2] == 0));
-}*/
-
-// checks if a pixel is purely black
-bool isBlack (uchar check)
-{
-    return (check == 0);
-}
 
 // Returns a list of all black eight-connected neighbors
 // of the input pixel.
@@ -195,85 +187,6 @@ void mapHoughToImage (int rows, int cols, float theta, float rho, int numAngle, 
     imshow("OVERLAY", overlay);
 }
 
-// Returns all corner pixels that are reachable from the input
-// CORNER PIXEL(!). It is expected that the input pixel is not in the
-// corner input vector.
-//
-// Once a corner is hit, the search is discontinued in
-// that "direction".
-//
-// It is assumed that image is binary black/white,
-// with white being the background color, and that
-// the image was thinned so all possible paths
-// are only one pixel wide.
-//
-// Since the code is very similiar, see getBlackComponentPixels for code commentary.
-/*vector<Vec2i> getNearestCorners(vector<Vec2i> corners, Vec2i pixel, Mat* image, Mat* reconstructed)
-{
-    queue<Vec2i> active;
-    vector<Vec2i> found;
-    vector<Vec2i> corners_reachable;
-
-    Mat test;
-    cvtColor(*image, test, CV_GRAY2RGB);
-    namedWindow("nearest", WINDOW_AUTOSIZE);
-
-
-    if(!isBlack(image->at<uchar>(pixel[0], pixel[1])))
-        return corners_reachable;
-
-    else
-    {
-        active.push(pixel);
-        found.push_back(pixel);
-
-
-        while (!active.empty())
-        {
-            Vec2i current = active.front();
-            vector<Vec2i> currentNeighbors = eightConnectedBlackNeighbors(current, image);
-
-            for(auto neighbor = currentNeighbors.begin(); neighbor != currentNeighbors.end(); neighbor++)
-            {
-                if(find(found.begin(), found.end(), *neighbor) == found.end())
-                {
-                    // neighbor is a corner
-                    if(find(corners.begin(), corners.end(), *neighbor) != corners.end())
-                    {
-                        corners_reachable.push_back(*neighbor);
-                        found.push_back(*neighbor);
-
-                        Point p = Point((*neighbor)[0], (*neighbor)[1]);
-                        rectangle(test, p, p, Scalar(255, 0, 0), 1, 8, 0);
-                        //imshow("nearest", test);
-
-                        break; // stop search in this direction
-                    }
-
-                    // neighbor is a regular black pixel
-                    else
-                    {
-                        active.push(*neighbor);
-                        found.push_back(*neighbor);
-                    }
-                }
-            }
-
-            active.pop();
-        }
-
-        // debug lines
-        for(auto iter = corners_reachable.begin(); iter != corners_reachable.end(); iter++)
-        {
-            line(*reconstructed, Point(pixel), Point(*iter), Scalar(0,0,0), 1);
-            //putText(testimage, to_string(iterno), current, FONT_HERSHEY_SIMPLEX, 0.4, Scalar(0,255,0), 1, 8, false);
-        }
-
-        cout << "#Corners reachable: " << corners_reachable.size() << "\n";
-        return corners_reachable;
-    }
-}*/
-
 // Returns all black pixels that can be reached
 // from the input pixel, including the pixel itself (DFS).
 // Expects a binary (CV_U8 / CV_U8C1) matrix.
@@ -293,7 +206,7 @@ vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
 
     // if starting point is not black
     // return empty list
-    if(!isBlack(image->at<uchar>(pixel[0], pixel[1])))
+    if(image->at<uchar>(pixel[0], pixel[1]) != 0)
         return *connected;
 
     else
@@ -301,9 +214,6 @@ vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
         // add start pixel to open set and output
         // found->push_back(pixel);
         active->push(pixel);
-
-        if(pixel == Vec2i(78, 685))
-            cout << pixel << "\n";
 
         // search neighbors while
         // there are still unexpanded pixels
@@ -331,9 +241,6 @@ vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
                     if(find(found->begin(), found->end(), *neighbor) == found->end())
                         active->push(*neighbor);
             }
-
-            if(active->size() % 100 == 0)
-                cout << "SIZE: " << active->size() << "\n";
         }
 
 
@@ -351,11 +258,7 @@ vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
 // Erase all black pixels that belong to a component.
 void eraseComponentPixels (ConnectedComponent comp, Mat* image)
 {
-    cout << "TO DELETE: " << comp.numPixels << "\n";
-
-    if(comp.numPixels == 2279)
-        cout << "";
-
+    // starting pixel for connecting pixel search
     Vec2i seed = comp.seed;
 
     // check if seed is out of bounds
@@ -374,13 +277,7 @@ void eraseComponentPixels (ConnectedComponent comp, Mat* image)
 
     // swap all black component pixels for white ones
     for(vector<Vec2i>::iterator pixel = pixels.begin(); pixel != pixels.end(); pixel++)
-    {
-        if((*pixel)[0] < 0  || (*pixel)[0] > image->rows ||
-           (*pixel)[1] < 0  || (*pixel)[1] > image->cols)
-                cout << "DELETING PX AT: " << (*pixel)[0] << ", " << (*pixel)[1] << "\n";
-
         (*image).at<uchar>((*pixel)[0], (*pixel)[1]) = 255;
-    }
 }
 
 /**
@@ -413,14 +310,13 @@ void getBlackLayer(Vec3b thresholds, Mat input, Mat* output)
 
     namedWindow("black layer", WINDOW_AUTOSIZE);
     imshow("black layer", *output);
-    imwrite("BLACK.png", *output );
+    //imwrite("BLACK.png", *output );
 }
 
 
 // checks if a MBR coordinate is invalid
 bool isValidCoord (Vec2i* check)
 {
-    //return (check != NULL);
     return (!(check[0] == Vec2i(INT_MAX, INT_MAX) || check[1] == Vec2i(-1, -1)));
 }
 
@@ -476,10 +372,21 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
     }
 }
 
+// Calculates the cartesian distance between two points in 2D space.
+double distanceBetweenPoints (Vec2i a, Vec2i b)
+{
+    int x1 = a[1];
+    int y1 = a[0];
 
-// Checks if a point is on a polar line or not.
-// Uses a tolerance to cope with float/double values.
-bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance)
+    int x2 = b[1];
+    int y2 = b[0];
+
+    return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+}
+
+// Calculates the distance of a cartesian point to a polar line
+// (for instance, the distance to Hough lines).
+double distanceFromPolarLine (Vec2f point, Vec2f polarLine)
 {
     // cartesian coordinates of the point
     double x = point[1];
@@ -497,13 +404,9 @@ bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance)
     double m; poX == 0 ? m = (-1. / INT_MAX) : m = -1. / ((poY - 0) / (poX - 0));
     double b = -(m * poX) + poY;
 
-    // plug in point and check if equation holds (within tolerance)
-    // if yes, then the point is on the line.
-    double res = m * x + b; // only works for integer values!
-
     // find two points on the line.
     Point begin = Point(0, (m * 0 + b));
-    Point end = Point (10000, (m * 10000 + b));
+    Point end = Point (100000, (m * 100000 + b)); // unsafe - should be image->cols instead
 
     // calculate input point distance from line (needed because of float precision).
     // since the minimum resolution of a screen is
@@ -511,7 +414,14 @@ bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance)
     double normalLength = hypot(end.x - begin.x, end.y - begin.y);
     double dist = (double) abs(((x - begin.x) * (end.y - begin.y) - (y - begin.y) * (end.x - begin.x)) / normalLength);
 
-    if (dist <= tolerance)
+    return dist;
+}
+
+// Checks if a point is on a polar line or not.
+// Uses a tolerance to cope with floating point values.
+bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance)
+{
+    if (distanceFromPolarLine(point, polarLine) <= tolerance)
         return true;
     else
         return false;

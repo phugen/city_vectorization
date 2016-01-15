@@ -1,3 +1,9 @@
+/**
+  * This class provides an implementation of the "Union-Find" data structure.
+  *
+  * Author: Kartik Kukreja (https://kartikkukreja.wordpress.com)
+  */
+
 #include "include/unionfind.hpp"
 
 
