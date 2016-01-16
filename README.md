@@ -18,5 +18,5 @@
 * Open `Project Properties -> Configuration Properties`
   * Under `Debugging -> Environment` delete the preconfigured stuff of Qt and add `PATH=%QTDIR%\bin;$(ProjectDir)lib;%PATH%;`
     (usually the preconfig of Qt doesn't work, even though it tries to do the same thing we added just now)
-* The Project should now be ready to compile
+* The Project should now be ready to compile and run
 
