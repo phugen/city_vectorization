@@ -31,6 +31,7 @@ public:
 	/* Funktionen werden ausgelöst, wenn auf den entsprechenden Button geklickt wird */
 	void on_pbOpenImage_clicked();
 	void on_pbTestAction_clicked();
+	int on_pbOldMain_clicked();
 
 private:
 	Ui::city_vectorizationClass ui;

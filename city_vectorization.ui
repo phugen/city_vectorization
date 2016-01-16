@@ -77,9 +77,9 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton">
+        <widget class="QPushButton" name="pbOldMain">
          <property name="text">
-          <string>PushButton</string>
+          <string>Old Main</string>
          </property>
         </widget>
        </item>
