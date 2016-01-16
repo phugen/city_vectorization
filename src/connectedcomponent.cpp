@@ -3,7 +3,7 @@
   * e.g. a mass of black pixels in which each pixel is connected
   * to all other pixels of the component by (indirect) eight-connection.
   *
-  * Author: Philipp Hugenroth
+  * Author: Phugen
   */
 
 #include "include/connectedcomponent.hpp"
@@ -20,7 +20,7 @@ ConnectedComponent::ConnectedComponent(Vec2i newmin, Vec2i newmax, int newPixels
     int y = (newmin[1] + newmax[1]) / 2;
     centroid = Vec2i(x, y);
 
-    houghLine = NULL;
+    //houghLine = NULL;
 
     this->seed = seed;
     numPixels = newPixels;
@@ -29,7 +29,7 @@ ConnectedComponent::ConnectedComponent(Vec2i newmin, Vec2i newmax, int newPixels
 ConnectedComponent::~ConnectedComponent()
 {}
 
-ostream& operator<<(ostream& stream, const ConnectedComponent& obj)
+ostream& operator << (ostream& stream, const ConnectedComponent& obj)
 {
     int pxInMBR = (((obj.mbr_max[1] + 1) - obj.mbr_min[1]) * ((obj.mbr_max[0] + 1) - obj.mbr_min[0]));
 

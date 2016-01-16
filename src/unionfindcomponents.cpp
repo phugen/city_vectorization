@@ -250,11 +250,11 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
             trueLabels.insert(uf->find(labels[i * cols + j]));
         }
 
-    cout << "SECOND PASS DONE" << "\n\n";
+    cout << "Connected component analysis done." << "\n";
 
 
     int numTrueComponents = trueLabels.size();
-    cout << "Number of components found: " << numTrueComponents << "\n";
+    cout << "Number of components found: " << numTrueComponents << "\n\n";
 
 
     Mat showMBR;

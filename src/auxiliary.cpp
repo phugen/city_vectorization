@@ -2,7 +2,7 @@
   * Various helper functions are defined here, such as finding all
   * eight-connected, black pixels around a specified pixel.
   *
-  * Author: Philipp Hugenroth
+  * Author: Phugen
   */
 
 #include "include/auxiliary.hpp"

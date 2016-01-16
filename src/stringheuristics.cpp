@@ -1,7 +1,7 @@
 /**
   * Contains code related to heuristics that identify text.
   *
-  * Author: Philipp Hugenroth
+  * Author: Phugen
   */
 
 #include "include/stringheuristics.hpp"
@@ -14,7 +14,7 @@ double localAvgHeight (std::vector<ConnectedComponent> cluster, int listPos)
 
     // account for comps near the start or end of the cluster list
     listPos - 2 < 0 ? startPos = 0 : startPos = listPos - 2;
-    listPos + 2 >= cluster.size() ? endPos = cluster.size() - 1 : endPos = listPos + 2;
+    listPos + 2 >= (int) cluster.size() ? endPos = (int) cluster.size() - 1 : endPos = listPos + 2;
 
     double localAvg = 0;
 

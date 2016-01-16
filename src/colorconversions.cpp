@@ -2,7 +2,7 @@
   * Contains functions dealing with converting color values
   * from one color space to another.
   *
-  * Author: Philipp Hugenroth
+  * Author: Phugen
   */
 
 #include "include/colorconversions.hpp"

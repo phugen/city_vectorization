@@ -2,8 +2,10 @@
   * A tweaked version of openCV's Hough line transformation function.
   * Allows access to the accumulator and separates accumulator calculation
   * and line extraction, while the latter can be done in multiple ways.
+  * Also provides a way to trace which input point contributed to which
+  * cells in the accumulator to delete these contributions individually later.
   *
-  * Author: openCV (see license below) / Philipp Hugenroth
+  * Author: openCV (see license below) / Phugen
   */
 
 /*M///////////////////////////////////////////////////////////////////////////////////////
@@ -51,6 +53,7 @@
 
 #include "include/customhoughtransform.hpp"
 #include <iostream>
+#include <map>
 
 using namespace std;
 using namespace cv;
@@ -78,7 +81,8 @@ array of (rho, theta) pairs. linesMax is the buffer size (number of pairs).
 Functions return the actual number of found lines.
 */
 void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
-                       double min_theta, double max_theta, int* accumulator)
+                       double min_theta, double max_theta, int* accumulator,
+                       map<Vec2i, vector<int>, Vec2iCompare>* contributions)
 {
     int i, j;
     float irho = 1 / rho;
@@ -123,7 +127,6 @@ void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
 #endif
 
     AutoBuffer<int> _accum((numangle+2) * (numrho+2));
-    std::vector<int> _sort_buf;
     AutoBuffer<float> _tabSin(numangle);
     AutoBuffer<float> _tabCos(numangle);
     int *accum = _accum;
@@ -143,13 +146,22 @@ void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
         for( j = 0; j < width; j++ )
         {
             if( image[i * step + j] != 0 )
+            {
+                Vec2i inputPoint = Vec2i(i, j);// centroid coordinates
+                vector<int> cList = vector<int>(0, 0); // associated accumulator positions
+
                 for(int n = 0; n < numangle; n++ )
                 {
                     int r = cvRound( j * tabCos[n] + i * tabSin[n] );
                     r += (numrho - 1) / 2;
                     accum[(n+1) * (numrho+2) + r+1]++;
-                    accumulator[(n+1) * (numrho+2) + r+1]++; // add to exposed accum; zero matrix or other sane value init expected.
+                    accumulator[(n+1) * (numrho+2) + r+1]++; // add to exposed accum; zero matrix or other sane init value expected.
+                    cList.push_back((n+1) * (numrho+2) + r+1); // save accumulator position of contributed value
                 }
+
+                // associate all contribution positions with this input point
+                contributions->emplace(inputPoint, cList);
+            }
         }
 
     // stage 2. find local maximums
@@ -195,7 +207,7 @@ void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
 // pairs that the line at the same vector position in "lines" contri-
 // buted to the accumulator, so they can be deleted individually.
 void HoughLinesExtract (int* accum, int numrho, int numangle, float rho, float theta, float min_theta,
-                        int threshold, vector<Vec2f>* lines, vector<Vec2i>* contributions, int mode)
+                        int threshold, vector<Vec2f>* lines, int mode)
 {
     vector<int> _sort_buf;
 
@@ -238,22 +250,23 @@ void HoughLinesExtract (int* accum, int numrho, int numangle, float rho, float t
         line.rho = (r - (numrho - 1)*0.5f) * rho;
         line.angle = static_cast<float>(min_theta) + n * theta;
 
-        // store accumulator cell positions and lines
-        contributions->push_back(Vec2i(r, n));
+        // store lines
         lines->push_back(Vec2f(line.rho, line.angle));
     }
 }
 
-// Deletes the contributions denoted by (numrho, numangle) pairs in the
-// passed vector from the Hough accumulator.
-void deleteLineContributions (int* accumulator, int numangle, vector<Vec2i> contributions)
+// Deletes the contributions denoted by accumulator positions from the Hough accumulator.
+void deleteLineContributions (int* accumulator, Vec2i inputPoint, map<Vec2i, vector<int>, Vec2iCompare> contributions)
 {
-    for(auto iter = contributions.begin(); iter != contributions.end(); iter++)
-    {
-        Vec2f pos = *iter;
-        int r = pos[0];
-        int n = pos[1];
+    // do map lookup for input point
+    auto iter = contributions.find(inputPoint);
 
-        accumulator[r * numangle + n]--;
+    if(iter != contributions.end())
+    {
+        // delete all contributions in the list from accumulator
+        for(auto pos = (*iter).second.begin(); pos != (*iter).second.end(); pos++)
+            accumulator[*pos]--;
     }
 }
+
+
