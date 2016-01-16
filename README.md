@@ -16,7 +16,7 @@
   * (if you use `x86` Platform you can copy most of the settings from `x64`, they just are not preconfigured currently)
 * Make sure the `Qt Project Settings` are using the correct `Version`
 * Open `Project Properties -> Configuration Properties`
-  * Under `Debugging -> Environment` delete the preconfigured stuff of Qt and add `PATH=%QTDIR%\bin;$(ProjectDir)lib;%PATH%;`
+  * Under `Debugging -> Environment` delete the preconfigured stuff of Qt and add `PATH=%QTDIR%\bin;$(ProjectDir)lib;$(ProjectDir)include\opencv\build\x64\vc12\bin;%PATH%;`
     (usually the preconfig of Qt doesn't work, even though it tries to do the same thing we added just now)
 * The Project should now be ready to compile and run
 
