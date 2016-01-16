@@ -149,8 +149,8 @@ void mapHoughToImage (int rows, int cols, float theta, float rho, int numAngle, 
     int maxacc = 0;
 
     // re-usable cosine and sine values.
-    float cos_v[numAngle];
-    float sin_v[numAngle];
+    std::vector<float> cos_v(numAngle);
+    std::vector<float> sin_v(numAngle);
 
     for (int i = 0; i < numAngle; i++)
     {
