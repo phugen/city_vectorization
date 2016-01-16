@@ -4,7 +4,7 @@
   *
   * (https://en.wikipedia.org/wiki/Connected-component_labeling)
   *
-  * Author: Philipp Hugenroth
+  * Author: Phugen
   */
 
 #include "include/unionfindcomponents.hpp"

@@ -22,7 +22,7 @@ using namespace std;
 using namespace cv;
 
 // A < B, if its A's distance to the associated hough line
-// is smaller than B's distance to the same (!) line.
+// is smaller than B's distance to the same (!) hough line.
 bool compareByLineDistance (ConnectedComponent a, ConnectedComponent b)
 {
     return (distanceFromPolarLine(a.centroid, a.houghLine) <
