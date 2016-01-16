@@ -156,20 +156,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\areafilter.cpp" />
-    <ClCompile Include="src\auxiliary.cpp" />
     <ClCompile Include="src\city_vectorization.cpp" />
-    <ClCompile Include="src\collineargrouping.cpp" />
-    <ClCompile Include="src\colorconversions.cpp" />
-    <ClCompile Include="src\connectedcomponent.cpp" />
-    <ClCompile Include="src\customhoughtransform.cpp" />
     <ClCompile Include="src\ImageReader.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\QtOpencvCore.cpp" />
-    <ClCompile Include="src\stringheuristics.cpp" />
-    <ClCompile Include="src\unionfind.cpp" />
-    <ClCompile Include="src\unionfindcomponents.cpp" />
-    <ClCompile Include="src\zhangsuen.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="city_vectorization.ui">
