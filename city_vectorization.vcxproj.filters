@@ -56,6 +56,36 @@
     <ClCompile Include="src\QtOpencvCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\areafilter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\auxiliary.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\collineargrouping.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\colorconversions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\connectedcomponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\customhoughtransform.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stringheuristics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\unionfind.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\unionfindcomponents.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\zhangsuen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="city_vectorization.ui">
@@ -72,10 +102,39 @@
     <ClInclude Include="GeneratedFiles\ui_city_vectorization.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="QtOpencvCore.hpp">
+    <ClInclude Include="include\areafilter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ImageReader.hpp">
+    <ClInclude Include="include\auxiliary.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\collineargrouping.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\colorconversions.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\connectedcomponent.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\customhoughtransform.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ImageReader.hpp" />
+    <ClInclude Include="include\opencvincludes.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\QtOpencvCore.hpp" />
+    <ClInclude Include="include\stringheuristics.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\unionfind.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\unionfindcomponents.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\zhangsuen.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
