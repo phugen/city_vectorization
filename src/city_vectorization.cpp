@@ -16,6 +16,7 @@ using namespace cv;
 #include <algorithm>
 
 
+
 city_vectorization::city_vectorization(QWidget *parent)
 	: QMainWindow(parent)
 {
