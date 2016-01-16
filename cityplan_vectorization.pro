@@ -31,7 +31,8 @@ HEADERS += \
     include/unionfind.hpp \
     include/unionfindcomponents.hpp \
     include/zhangsuen.hpp \
-    include/stringheuristics.hpp
+    include/stringheuristics.hpp \
+    include/vec2icompare.hpp
 
 INCLUDEPATH += "C:/opencv/build/include"
 

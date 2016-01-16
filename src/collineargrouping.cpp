@@ -3,7 +3,7 @@
   * as described by L. Fletcher and R. Kasturi in their publication
   * "A Robust Algorithm for Text String Separation from Mixed Text/Graphics Images".
   *
-  * Author: Philipp Hugenroth, 2015
+  * Author: Phugen
   */
 
 #define _USE_MATH_DEFINES
@@ -11,6 +11,7 @@
 #include "include/collineargrouping.hpp"
 #include <cmath>
 #include <iostream>
+#include <map>
 
 #include "include/auxiliary.hpp"
 #include "include/colorconversions.hpp"
@@ -20,6 +21,7 @@
 
 using namespace std;
 using namespace cv;
+
 
 // A < B, if its A's distance to the associated hough line
 // is smaller than B's distance to the same (!) hough line.
@@ -85,17 +87,16 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     memset(accumulator, 0, (sizeof(int) * (numAngle+2) * (numRho+2)));
 
     vector<Vec2f> lines (0, 0); // will contain all found lines
-    vector<Vec2i> allContributions (0, 0); // stores (numrho, numangle) tuples for a line in "lines "at the same position
-
+    map<Vec2i, vector<int>, Vec2iCompare> contributions; // stores accumulator contribution positions for all input points
 
     // Do multiple hough transforms using the same accumulator while limiting
     // the angle of the lines to 0° - 5°, 85° - 95° and 175° - 180° respectively
     // to find all vertically or horizontally aligned components
-    HoughLinesCustom(hough_UC, rho, theta, 0.0, 0.0872665, accumulator);
-    HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0.0, threshold, &lines, &allContributions, THRESH_GT);
+    HoughLinesCustom(hough_UC, rho, theta, 0.0, 0.0872665, accumulator, &contributions);
+    HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0.0, threshold, &lines, THRESH_GT);
 
-    HoughLinesCustom(hough_UC, rho, theta, 1.48353, 1.65806, accumulator);
-    HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 1.48353, threshold, &lines, &allContributions, THRESH_GT);
+    HoughLinesCustom(hough_UC, rho, theta, 1.48353, 1.65806, accumulator, &contributions);
+    HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 1.48353, threshold, &lines, THRESH_GT);
 
     cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
 
@@ -106,7 +107,6 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
     vector<Vec2f> clusterLines; // lines parallel to the initial line
     vector<ConnectedComponent> cluster; // components that lie on clusterLines
-    vector<Vec2f> clusterContributions; // all accumulator positions of lines that lead to the clustering, TBD
 
     avgheight = 0.; // Reset average height
     int clusterNo = 0;
@@ -114,7 +114,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     // text/graphic segmentation loop
     while (counter < 2)
     {
-        while (threshold > 6)
+        while (threshold > 2)
         {
             // PAPER STEPS 4-10: for all INITIAL LINES
             for (vector<Vec2f>::iterator houghLine = lines.begin(); houghLine != lines.end(); houghLine++)
@@ -195,7 +195,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
                     // delete those values from the accumulator which were contributed
                     // to it by components in the deleted cluster
-                    //deleteLineContributions (accumulator, numAngle, allContributions);
+                    deleteLineContributions (accumulator, (*clusComp).centroid, contributions);
                 }
 
                 //namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
@@ -221,16 +221,16 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
             {
                 // extract all lines that now exactly meet the threshold
                 // (they were lower than the previous threshold, and can now be admitted)
-                HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, &allContributions, THRESH_EQ);
-                HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 1.48353, threshold, &lines, &allContributions, THRESH_EQ);
+                HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, THRESH_EQ);
+                HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 1.48353, threshold, &lines, THRESH_EQ);
 
                 cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
             }
 
-            // if this is the second pass (0 - 180°)
+            // if this is the second pass (= 0 - 180° lines, i.e. all other angles)
             else
             {
-                HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, &allContributions, THRESH_EQ);
+                HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, THRESH_EQ);
 
                 cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
             }
@@ -245,19 +245,18 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
             drawLines(lines, &showHough, Scalar(255, 0, 0));
             //drawLines(lines, &hough_8U, Scalar(255, 0, 0));
 
-            // debug: map hough space to image
-            //mapHoughToImage (rows, cols, theta, rho, numAngle, numRho, accumulator);
-
-            // clear extracted lines and accumulator
+            // clear extracted lines, accumulator and accumulator contribution positions
             lines.clear();
             memset(accumulator, 0, (sizeof(int) * (numAngle+2) * (numRho+2)));
+            contributions.clear();
+
 
             // reset threshold
             threshold = 20;
 
             // calculate hough domain for lines with angles [0°, 180°]
-            HoughLinesCustom(hough_UC, rho, theta, 0., 3.14159, accumulator);
-            HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, &allContributions, THRESH_GT);
+            HoughLinesCustom(hough_UC, rho, theta, 0., 3.14159, accumulator, &contributions);
+            HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, THRESH_GT);
 
             cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
 

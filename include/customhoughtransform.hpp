@@ -2,7 +2,11 @@
 #define CUSTOMHOUGHTRANSFORM_HPP
 
 #include "opencvincludes.hpp"
+
 #include <vector>
+#include <map>
+
+#include "include/vec2icompare.hpp"
 
 // Mode defines for Hough extraction method
 #define THRESH_GT 0
@@ -16,12 +20,15 @@ struct LinePolar
     float angle; // the angle of the origin vector.
 };
 
-void HoughLinesCustom ( const cv::Mat& img, float rho, float theta,
-                        double min_theta, double max_theta, int* accumulator);
 
-void HoughLinesExtract (int* accum, int numrho, int numangle, float rho, float theta, float min_theta, int threshold,
-                        std::vector<cv::Vec2f>* lines, std::vector<cv::Vec2i>* contributions,
-                        int mode = THRESH_GT);
+void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
+                       double min_theta, double max_theta, int* accumulator,
+                       std::map<cv::Vec2i, std::vector<int>, Vec2iCompare>* contributions);
+
+void HoughLinesExtract (int* accum, int numrho, int numangle, float rho, float theta, float min_theta,
+                        int threshold, std::vector<cv::Vec2f>* lines, int mode = THRESH_GT);
+
+void deleteLineContributions (int* accumulator, cv::Vec2i inputPoint, std::map<cv::Vec2i, std::vector<int>, Vec2iCompare> contributions);
 
 #endif // CUSTOMHOUGHTRANSFORM_HPP
 

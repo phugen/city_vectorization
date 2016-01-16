@@ -2,7 +2,7 @@
   * Implements a filter for connected component MBRs,
   * as needed by the text extraction algorithm in "collineargrouping.cpp".
   *
-  * Author: Philipp Hugenroth
+  * Author: Phugen
   */
 
 #include "include/areafilter.hpp"

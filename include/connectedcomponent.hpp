@@ -28,13 +28,6 @@ class ConnectedComponent
        ConnectedComponent(cv::Vec2i newmin, cv::Vec2i newmax, int newPixels, cv::Vec2i seed);
        ~ConnectedComponent();
 
-       // Methods:
-
-       // Returns true if the MBR of this component is intersected by the
-       // Hessian normal form line = (theta, rho), or if the line
-       // is its tangent.
-       //bool intersected (float rho, float theta);
-
        // overwrite << operator to output information about this component
        friend std::ostream& operator << (std::ostream& stream, const ConnectedComponent& obj);
 };
