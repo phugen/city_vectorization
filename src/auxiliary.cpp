@@ -384,6 +384,33 @@ double distanceBetweenPoints (Vec2i a, Vec2i b)
     return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
 }
 
+// Calculates the distance between a point and a line segment.
+// (= the length of the segment that is perpendicular to the
+// line segment and ends at the supplied point)
+double distanceFromCartesianLine(Vec2i point, pair<Vec2i, Vec2i> linePoints)
+{
+    int x = point[1];
+    int y = point[0];
+
+    int lp1_x = linePoints.first[1];
+    int lp1_y = linePoints.first[0];
+
+    int lp2_x = linePoints.second[1];
+    int lp2_y = linePoints.second[0];
+
+    /*int diffX = lp2_x - lp1_x;
+
+    // find line equation of the line that extends the segment
+    double m; diffX == 0 ? m = INT_MAX : m = (lp2_y - lp1_y) / (lp2_x - lp1_x); // find slope
+    double b = -(m * lp1_x) + lp1_y; // find y-intersection by plugging in a point*/
+
+    // calculate input point distance from line
+    double normalLength = hypot(lp2_x - lp1_x, lp2_y - lp1_y);
+    double dist = (double) abs(((x - lp1_x) * (lp2_y - lp1_y) - (y - lp1_y) * (lp2_x - lp1_x)) / normalLength);
+
+    return dist;
+}
+
 // Calculates the distance of a cartesian point to a polar line
 // (for instance, the distance to Hough lines).
 double distanceFromPolarLine (Vec2f point, Vec2f polarLine)
@@ -408,9 +435,7 @@ double distanceFromPolarLine (Vec2f point, Vec2f polarLine)
     Point begin = Point(0, (m * 0 + b));
     Point end = Point (100000, (m * 100000 + b)); // unsafe - should be image->cols instead
 
-    // calculate input point distance from line (needed because of float precision).
-    // since the minimum resolution of a screen is
-    // one pixel, that should probably be the tolerance threshold.
+    // Calculate input point distance from line.
     double normalLength = hypot(end.x - begin.x, end.y - begin.y);
     double dist = (double) abs(((x - begin.x) * (end.y - begin.y) - (y - begin.y) * (end.x - begin.x)) / normalLength);
 

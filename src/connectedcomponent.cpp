@@ -26,8 +26,7 @@ ConnectedComponent::ConnectedComponent(Vec2i newmin, Vec2i newmax, int newPixels
     numPixels = newPixels;
 }
 
-ConnectedComponent::~ConnectedComponent()
-{}
+ConnectedComponent::~ConnectedComponent(){}
 
 ostream& operator << (ostream& stream, const ConnectedComponent& obj)
 {

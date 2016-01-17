@@ -17,7 +17,7 @@
 #include "include/colorconversions.hpp"
 #include "include/customhoughtransform.hpp"
 #include "include/areafilter.hpp"
-#include "include/stringheuristics.hpp"
+#include "include/collinearstring.hpp"
 
 using namespace std;
 using namespace cv;
@@ -133,7 +133,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 // the rho resolution guess.
                 for(vector<Vec2f>::iterator clLine = clusterLines.begin(); clLine != clusterLines.end(); clLine++)
                     for(vector<ConnectedComponent>::iterator component = comps->begin(); component != comps->end(); component++)
-                        if(pointOnPolarLine((*component).centroid, *clLine, 2.))
+                        if(pointOnPolarLine((*component).centroid, *clLine, 1.))
                         {
                             cluster.push_back(*component);
                             avgheight += (*component).mbr_max[0] - (*component).mbr_min[0];
@@ -151,7 +151,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 // find all components that lie in close proximity (= "on") a cluster line
                 for(vector<Vec2f>::iterator clLine = clusterLines.begin(); clLine != clusterLines.end(); clLine++)
                     for(vector<ConnectedComponent>::iterator component = comps->begin(); component != comps->end(); component++)
-                        if(pointOnPolarLine((*component).centroid, *clLine, 2.))
+                        if(pointOnPolarLine((*component).centroid, *clLine, 1.))
                         {
                             // mark all cluster centroids which are in this cluster as blue
                             clusterMat_V3.at<Vec3b>((*component).centroid[0], (*component).centroid[1]) = Vec3b(255, 0, 0);
@@ -170,24 +170,19 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 // sort components in this cluster by their distance to the original hough line
                 sort(cluster.begin(), cluster.end(), compareByLineDistance);
 
-                // Refine the cluster further by using heuristics such as the inter-component gap.
-                for(vector<ConnectedComponent>::iterator clusComp = cluster.begin(); clusComp != cluster.end(); clusComp++)
-                {
-                    // calculate average local height for this component
-                    double avgHeight = localAvgHeight(cluster, clusComp - cluster.begin());
+                cout << "REFINE: " << cluster.size() << " -> ";
 
-                    // Intercomponent gap must be <= average local height
-                    // for the component to stay in the cluster
-                    if(clusComp != cluster.end() || cluster.size() == 1)
-                        if(distanceBetweenPoints((*clusComp).centroid, (*(clusComp+1)).centroid) * 2.5 > avgHeight)
-                            cluster.erase(clusComp); // remove the unrelated component
-                }
+                // Calculate component meta information and refine clustering further based on it
+                CollinearString cs = CollinearString(cluster);
+                cluster = cs.comps;
+
+                cout << cluster.size() << "\n";
 
                 // 9) Separate strings from graphics in the cluster and delete them.
                 for(vector<ConnectedComponent>::iterator clusComp = cluster.begin(); clusComp != cluster.end(); clusComp++)
                 {
                     // Strings need to have at least two components
-                    if(cluster.size() >= 2)
+                    if(cluster.size() >= 3)
                         eraseComponentPixels(*clusComp, &erased);
 
                     // debug: delete deleted centroids

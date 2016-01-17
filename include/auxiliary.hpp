@@ -21,6 +21,10 @@ void eraseComponentPixels (ConnectedComponent comp, cv::Mat* image);
 bool isValidCoord (cv::Vec2i* check);
 
 void drawLines (std::vector<cv::Vec2f> lines, cv::Mat* image, cv::Scalar color);
+
+double distanceBetweenPoints (cv::Vec2i a, cv::Vec2i b);
+double distanceFromCartesianLine(cv::Vec2i point, std::pair<cv::Vec2i, cv::Vec2i> linePoints);
+double distanceFromPolarLine (cv::Vec2f point, cv::Vec2f polarLine);
 bool pointOnPolarLine (cv::Vec2f point, cv::Vec2f polarLine, double tolerance);
 
 void clusterCells (int totalNumberCells, float rhoStep, int numRho, cv::Vec2f primaryCell, std::vector<cv::Vec2f>* clusterLines);
