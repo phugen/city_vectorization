@@ -161,3 +161,6 @@ include/opencv/build/*
 include/opencv/sources/*
 include/opencv/LICENSE.txt
 include/opencv/README.md.txt
+
+# Image-files
+*.svg
