@@ -18,6 +18,8 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
+#include "contourfinding.hpp"
+
 class city_vectorization : public QMainWindow
 {
 	Q_OBJECT
@@ -32,6 +34,7 @@ public:
 	void on_pbOpenImage_clicked();
 	void on_pbTestAction_clicked();
 	int on_pbOldMain_clicked();
+	void on_pbCreateSvg_clicked();
 
 private:
 	Ui::city_vectorizationClass ui;

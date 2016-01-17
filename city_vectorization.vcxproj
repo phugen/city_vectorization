@@ -138,6 +138,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="contourfinding.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_city_vectorization.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -165,7 +166,6 @@
     <ClCompile Include="src\ImageReader.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\QtOpencvCore.cpp" />
-    <ClCompile Include="src\stringheuristics.cpp" />
     <ClCompile Include="src\unionfind.cpp" />
     <ClCompile Include="src\unionfindcomponents.cpp" />
     <ClCompile Include="src\zhangsuen.cpp" />
@@ -215,6 +215,7 @@
     <ClInclude Include="include\collineargrouping.hpp" />
     <ClInclude Include="include\colorconversions.hpp" />
     <ClInclude Include="include\connectedcomponent.hpp" />
+    <ClInclude Include="include\contourfinding.hpp" />
     <ClInclude Include="include\customhoughtransform.hpp" />
     <ClInclude Include="include\ImageReader.hpp" />
     <ClInclude Include="include\opencvincludes.hpp" />

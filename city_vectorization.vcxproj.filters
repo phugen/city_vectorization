@@ -56,10 +56,10 @@
     <ClCompile Include="src\QtOpencvCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\areafilter.cpp">
+    <ClCompile Include="contourfinding.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\connectedcomponent.cpp">
+    <ClCompile Include="src\areafilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\auxiliary.cpp">
@@ -68,10 +68,10 @@
     <ClCompile Include="src\colorconversions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\customhoughtransform.cpp">
+    <ClCompile Include="src\connectedcomponent.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\stringheuristics.cpp">
+    <ClCompile Include="src\customhoughtransform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\unionfind.cpp">
@@ -139,6 +139,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vec2icompare.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\contourfinding.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
