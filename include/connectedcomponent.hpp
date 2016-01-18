@@ -29,6 +29,8 @@ class ConnectedComponent
        ConnectedComponent(cv::Vec2i newmin, cv::Vec2i newmax, int newPixels, cv::Vec2i seed);
        ~ConnectedComponent();
 
+       bool operator == (const ConnectedComponent other);
+
        // overwrite << operator to output information about this component
        friend std::ostream& operator << (std::ostream& stream, const ConnectedComponent& obj);
 };

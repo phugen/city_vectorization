@@ -15,9 +15,21 @@ using namespace cv;
 
 CollinearString::CollinearString(vector<ConnectedComponent> cluster)
 {
-    comps = cluster;
+    this->comps = cluster;
+    this->groups = vector<CollinearGroup>();
+    this->phrases = vector<CollinearPhrase>();
 
-    refine();
+    // initialize vectors with 100 elements
+    for(size_t i = 0; i < 100; i++) // DEBUG: hardcoded!
+        groups.push_back(CollinearGroup());
+
+    for(size_t i = 0; i < 100; i++) // DEBUG: hardcoded!
+        phrases.push_back(CollinearPhrase());
+}
+
+CollinearString::~CollinearString()
+{
+
 }
 
 // Calculates the local average height from the four neighbors
@@ -62,26 +74,24 @@ double CollinearString::edgeToEdgeDistance (vector<ConnectedComponent> cluster, 
     if(listPos == (int) cluster.size() - 1)
         return INT_MAX; // dummy value
 
-    /**
-     * TODO: CHECK IF POINT COORDINATES ARE RIGHT - "Matrix style" coordinates?*/
 
-    // First MBR
+    // First MBR, coordinates in "matrix style", i.e. top left origin
     Vec2i mbr_min = cluster.at(listPos).mbr_min;
     Vec2i mbr_max = cluster.at(listPos).mbr_max;
 
-    Vec2i bot_left_1 = mbr_min;
-    Vec2i bot_right_1 = Vec2i(mbr_min[0], mbr_max[1]);
-    Vec2i top_right_1 = mbr_max;
-    Vec2i top_left_1 = Vec2i(mbr_max[0], mbr_min[1]);
+    Vec2i bot_left_1 = Vec2i(mbr_max[0], mbr_min[1]);
+    Vec2i bot_right_1 = mbr_max;
+    Vec2i top_right_1 = Vec2i(mbr_min[0], mbr_max[1]);
+    Vec2i top_left_1 = mbr_min;
 
     // Second MBR
     Vec2i mbr_min2 = cluster.at(listPos + 1).mbr_min;
     Vec2i mbr_max2 = cluster.at(listPos + 1).mbr_max;
 
-    Vec2i bot_left_2 = mbr_min2;
-    Vec2i bot_right_2 = Vec2i(mbr_min2[0], mbr_max2[1]);
-    Vec2i top_right_2 = mbr_max2;
-    Vec2i top_left_2 = Vec2i(mbr_max2[0], mbr_min2[1]);
+    Vec2i bot_left_2 = Vec2i(mbr_max2[0], mbr_min2[1]);
+    Vec2i bot_right_2 = mbr_max2;
+    Vec2i top_right_2 = Vec2i(mbr_min2[0], mbr_max2[1]);
+    Vec2i top_left_2 = mbr_min2;
 
     // define line endpoints for both MBRs
     pair<Vec2i, Vec2i> left_1 = make_pair(bot_left_1, top_left_1);
@@ -96,19 +106,13 @@ double CollinearString::edgeToEdgeDistance (vector<ConnectedComponent> cluster, 
 
     // First test if MBRs overlap - if they do, we'll consider the distance zero.
 
-    //if (RectA.Left < RectB.Right && RectA.Right > RectB.Left &&
-    //     RectA.Top > RectB.Bottom && RectA.Bottom < RectB.Top )
-
-    //if (RectA.X1 < RectB.X2 && RectA.X2 > RectB.X1 &&
-    //    RectA.Y1 < RectB.Y2 && RectA.Y2 > RectB.Y1)
-
-    // Check Y-aligned lines: m = +infinity => x = a
-    if(left_1.first[1] < right_2.first[1] && right_1.first[1] > left_2.first[1])
+    // Check X-dimension and Y-dimension overlap.
+    // Which of the two points on the line is chosen doesn't matter
+    // since the checked dimension is always the same for both.
+    if(!(left_1.first[1] < right_2.first[1]) && !(right_1.first[1] > left_2.first[1]) &&
+       !(top_1.first[0] > bottom_2.first[0]) && !(bottom_1.first[0] < top_2.first[0]))
         return 0.;
 
-    // Check X-aligned lines: m = 0 => y = b
-    if(top_1.first[0] > bottom_2.first[0] && bottom_1.first[0] < top_2.first[0])
-        return 0.;
 
     // The rectangles do not intersect, so find the minimum distance between the two
     // rectangles. The shortest line always has its origin on a vertex of one of
@@ -128,8 +132,8 @@ double CollinearString::edgeToEdgeDistance (vector<ConnectedComponent> cluster, 
 
     // Distances from points of MBR1 to sides of MBR2
     for(auto p1 = mbr1_points.begin(); p1 != mbr1_points.end(); p1++)
-            for(auto side2 = mbr2_sides.begin(); side2 != mbr2_sides.end(); side2++)
-                min_dist = min(min_dist, distanceFromCartesianLine(*p1, *side2));
+        for(auto side2 = mbr2_sides.begin(); side2 != mbr2_sides.end(); side2++)
+            min_dist = min(min_dist, distanceFromCartesianLine(*p1, *side2));
 
     // Distances from points of MBR2 to sides of MBR1
     for(auto p2 = mbr2_points.begin(); p2 != mbr2_points.end(); p2++)
@@ -139,11 +143,109 @@ double CollinearString::edgeToEdgeDistance (vector<ConnectedComponent> cluster, 
     return min_dist;
 }
 
+// Inspects the components in this string and classifies them as
+// isolated, part of words or as part of phrases in order to
+// refine the selection of components to delete from the image.
 void CollinearString::refine ()
 {
-    if(comps.size() == 0)
+    // Single, isolated component
+    if(this->comps.size() < 2)
         return;
 
+    double tc, tw; // character and word thresholds
+    double distToNext; // distance to next component
+
+    int listpos = 0; // position of current component in the list
+    int groupNumber = 0; // current word count
+    int phraseNumber = 0; // current phrase count
+
+    // 2.) Check inter-character distances until
+    // a component doesn't satisfy the threshold.
+    for(auto comp = this->comps.begin(); comp != this->comps.end() - 1; comp++)
+    {
+        CollinearGroup* curGroup = &(this->groups.at(groupNumber)); // get current group
+        listpos = comp - comps.begin(); // get current position in component list
+
+        // calculate inter-character and inter-word thresholds
+        tc = localAvgHeight(this->comps, listpos);
+        tw = 2.5 * tc;
+
+        // calculate distance from current component to the next
+        // in the component list
+        distToNext = edgeToEdgeDistance(this->comps, listpos);
+
+        // include current character in current group
+        // if the group is new
+        if(curGroup->size() == 0)
+            curGroup->chars.push_back(this->comps.at(listpos)); // head
+
+        // If the distance to the next component is below the
+        // inter-character threshold "tc", then components
+        // i and i+1 are part of the same word
+        if(distToNext <= tc)
+        {
+           curGroup->chars.push_back(this->comps.at(listpos + 1)); // tail
+
+            // if the word doesn't belong to a phrase already,
+            // mark it as a word
+            if(curGroup->type != 'p')
+                curGroup->type = 'w';
+        }
+
+        // current word ends because inter-character distance is too high
+        else
+        {
+            groupNumber++;
+
+            // 3.) If the distance to the next component is below the
+            // inter-word threshold "tw", then the previous word and the
+            // current component belong to the same phrase.
+            CollinearPhrase* curPhrase = &(this->phrases.at(phraseNumber));
+            CollinearGroup* prevGroup = &(this->groups.at(groupNumber - 1));
+
+            if(distToNext < tw)
+            {
+                // mark previous and current group as part of a phrase
+                prevGroup->type = 'p';
+                curGroup->type = 'p';
+
+                // make both part of the current phrase
+                curPhrase->words.push_back(*prevGroup);
+                curPhrase->words.push_back(*curGroup);
+            }
+
+            // The current component is not part of the current phrase,
+            // start a new one instead.
+            else
+                phraseNumber++;
+        }
+    }
+
+    // 4.) Search for consecutive isolated groups in phrases. If there are
+    // cases in which there are two or more consecutive isolated groups in
+    // a phrase, either truncate or split the groups.
+    for(int p = 0; p < phraseNumber; p++)
+        for(int g = 0; g < (int) this->phrases.at(p).words.size() - 1; g++)
+        {
+            CollinearPhrase* cp = &(this->phrases.at(p));
+
+            // find consecutive isolated groups
+            // in the current phrase
+            if(cp->words.at(g).type == 'i' && cp->words.at(g + 1).type == 'i')
+            {
+                for(int c = g; c < (int) cp->words.size(); c++)
+                {
+                    if(cp->words.at(c).type != 'i')
+                        break;
+
+                    cout << "ISOLATED COMPONENT AT POS " << c << "IN PHRASE " << p << "\n";
+                }
+
+            }
+        }
+}
+
+/*
     double avgHeight, distToNext;
 
     int oldsize = comps.size();
@@ -167,12 +269,11 @@ void CollinearString::refine ()
             distToNext = edgeToEdgeDistance(comps, listpos);
             //distToNext = distanceBetweenPoints (comps.at(listpos).centroid, comps.at(listpos+1).centroid);
 
-            // if the inter-character distance is higher
+            // if the inter-character distance is lower
             // than the threshold, don't delete this component
-            if(distToNext > avgHeight)
+            if(distToNext < avgHeight)
                 comps.erase(comp);
         }
 
         newsize = comps.size();
-    }
-}
+    }*/

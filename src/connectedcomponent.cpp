@@ -28,6 +28,15 @@ ConnectedComponent::ConnectedComponent(Vec2i newmin, Vec2i newmax, int newPixels
 
 ConnectedComponent::~ConnectedComponent(){}
 
+bool ConnectedComponent::operator == (const ConnectedComponent other)
+{
+    // define equality as having the same bounding box
+    if(mbr_min == other.mbr_min && mbr_max == other.mbr_max)
+        return true;
+    else
+        return false;
+}
+
 ostream& operator << (ostream& stream, const ConnectedComponent& obj)
 {
     int pxInMBR = (((obj.mbr_max[1] + 1) - obj.mbr_min[1]) * ((obj.mbr_max[0] + 1) - obj.mbr_min[0]));
