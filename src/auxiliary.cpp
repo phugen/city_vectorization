@@ -310,7 +310,7 @@ void getBlackLayer(Vec3b thresholds, Mat input, Mat* output)
 
     namedWindow("black layer", WINDOW_AUTOSIZE);
     imshow("black layer", *output);
-    //imwrite("BLACK.png", *output );
+    imwrite("BLACK.png", *output );
 }
 
 
@@ -398,18 +398,28 @@ double distanceFromCartesianLine(Vec2i point, pair<Vec2i, Vec2i> linePoints)
     int lp2_x = linePoints.second[1];
     int lp2_y = linePoints.second[0];
 
-    /*int diffX = lp2_x - lp1_x;
 
-    // find line equation of the line that extends the segment
-    double m; diffX == 0 ? m = INT_MAX : m = (lp2_y - lp1_y) / (lp2_x - lp1_x); // find slope
-    double b = -(m * lp1_x) + lp1_y; // find y-intersection by plugging in a point*/
+    // find length of the line segment
+    double segLength = distanceBetweenPoints(linePoints.first, linePoints.second);
 
-    // calculate input point distance from line
-    double normalLength = hypot(lp2_x - lp1_x, lp2_y - lp1_y);
-    double dist = (double) abs(((x - lp1_x) * (lp2_y - lp1_y) - (y - lp1_y) * (lp2_x - lp1_x)) / normalLength);
+    // degenerated segment, so normal point to point distance is sufficient
+    if (segLength == 0.)
+        return distanceBetweenPoints(point, linePoints.first);
 
-    return dist;
+    double t = ((x - lp1_x) * (lp2_x - lp1_x) + (y - lp1_y) * (lp2_y - lp1_y)) / segLength;
+
+    // point is on the infinite line, so find out which
+    // line endpoint to use for the segment distance
+    if (t < 0.)
+        return distanceBetweenPoints(point, linePoints.first);
+    if (t > 1.)
+        return distanceBetweenPoints(point, linePoints.second);
+
+
+    // else, use normal distance to point
+    return distanceBetweenPoints(point, Vec2i(lp1_y + t * (lp2_y - lp1_y), lp1_x + t * (lp2_x - lp1_x)));
 }
+
 
 // Calculates the distance of a cartesian point to a polar line
 // (for instance, the distance to Hough lines).
