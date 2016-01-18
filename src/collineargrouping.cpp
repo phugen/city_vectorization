@@ -67,7 +67,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     // matrix that indicates which components are
     // part of the current cluster
     Mat clusterMat_V3;
-    cvtColor(hough_UC, clusterMat_V3, CV_GRAY2RGB);
+    cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
 
     // output matrix
     Mat erased = input.clone();
@@ -97,6 +97,9 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
     HoughLinesCustom(hough_UC, rho, theta, 1.48353, 1.65806, accumulator, &contributions);
     HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 1.48353, threshold, &lines, THRESH_GT);
+
+    //HoughLinesCustom(hough_UC, rho, theta, 3.05433, 3.14159, accumulator, &contributions);
+    //HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 3.05433, threshold, &lines, THRESH_GT);
 
     cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
 
@@ -154,9 +157,6 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                     for(vector<ConnectedComponent>::iterator component = comps->begin(); component != comps->end(); component++)
                         if(pointOnPolarLine((*component).centroid, *clLine, 1.))
                         {
-                            // mark all cluster centroids which are in this cluster as blue
-                            clusterMat_V3.at<Vec3b>((*component).centroid[0], (*component).centroid[1]) = Vec3b(255, 0, 0);
-
                             // associate current Hough line with the component
                             (*component).houghLine = *houghLine;
 
@@ -165,9 +165,22 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                                 cluster.push_back(*component);
                         }
 
-                // apply area ratio filter to eliminate large components from the cluster
-                // whose centroids are coincidentally on a string's hough line
-                areaFilter(&cluster, 5);
+                // 9) Mark those components for deletion which still belong to
+                // the cluster even after the cluster area filter.
+                // These components will be deleted when all hough lines for
+                // this threshold have been evaluated to avoid destructive line overlap.
+                if(cluster.size() != 0)
+                {
+                    // apply area ratio filter to eliminate large components from the cluster
+                    // whose centroids are coincidentally on a string's hough line
+                    //clusterCompAreaFilter(&cluster, 5);
+                }
+
+                // 10.) Delete those values from the accumulator which were contributed
+                // to it by components which are still in the cluster by now and thus
+                // are marked for deletion anyway
+                for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
+                    deleteLineContributions(accumulator, (*comp).centroid, contributions);
 
                 // sort components in this cluster by their distance to the original hough line
                 sort(cluster.begin(), cluster.end(), compareByLineDistance);
@@ -175,16 +188,31 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 //cout << "REFINE: " << cluster.size() << " -> ";
 
                 // Calculate component meta information and store it
-                CollinearString cs = CollinearString(cluster);
+                CollinearString cs = CollinearString(cluster, avgheight);
                 cs.refine();
                 collinearStrings.push_back(cs);
 
-                //cout << cluster.size() << "\n";
+                // debug: show cluster MBRs---------------------------------------------
+                for(auto comp = cs.comps.begin(); comp != cs.comps.end(); comp++)
+                {
+                    ConnectedComponent c = *comp;
 
-                //namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
-                //imshow("CURRENT CLUSTER", clusterMat_V3);
+                    // rectangle works with (col,row), so swap coordinates
+                    Point min = Vec2i(c.mbr_min[1], c.mbr_min[0]);
+                    Point max = Vec2i(c.mbr_max[1], c.mbr_max[0]);
 
-                //cout << "CLUSTER SIZE: " << cluster.size() << "\n\n";
+                    // draw MBR for this component
+                    rectangle(clusterMat_V3, min, max, Scalar(255, 0, 0), 1, 8, 0);
+                }
+
+                namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
+                imshow("CURRENT CLUSTER", clusterMat_V3);
+
+                //waitKey(0);
+
+                // reset cluster mat
+                cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
+                //------------------------------------------------------------------
 
                 // clustering for this hough line is done
                 cluster.clear();
@@ -193,7 +221,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 clusterNo++;
             }
 
-            // 9) All clusters for the current threshold have been evaluated.
+            // All clusters for the current threshold have been evaluated.
             // Now, graphics can be deleted by using the meta information retrieved earlier.
             // Extra care is taken in order to not delete shorter strings before longer strings,
             // as this can lead to characters not being deleted ("destructive line overlap").
@@ -207,17 +235,37 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                         // exceed the current threshold - since the threshold
                         // signalizes how long the string is an drops from
                         // highest (longest) to lowest (shortest).
-                        if(current.size() > 2 && current.size() > threshold)
+                        if(current.size() + 1 >= threshold && current.size() > 1)
                         {
+                            if(current.size() != 1)
+                                cout << current.size() + 1 << " >= " << threshold << "\n";
+
                             for(auto coch = current.chars.begin(); coch != current.chars.end(); coch++)
                             {
+                                // DEBUG: Draw MBR of component to be deleted-----------
+                                /*ConnectedComponent c = *coch;
+
+                                // rectangle works with (col,row), so swap coordinates
+                                Point min = Vec2i(c.mbr_min[1], c.mbr_min[0]);
+                                Point max = Vec2i(c.mbr_max[1], c.mbr_max[0]);
+
+                                // draw MBR for this component
+                                rectangle(clusterMat_V3, min, max, Scalar(255, 0, 0), 1, 8, 0);
+
+                                namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
+                                imshow("CURRENT CLUSTER", clusterMat_V3);*/
+
+                                //waitKey(0);
+                                //-------------------------------------------------------
+
+
                                 // erase the pixels associated with the current
                                 // component from the output image
                                 eraseComponentPixels(*coch, &erased);
 
-                                // delete those values from the accumulator which were contributed
-                                // to it by components in the deleted cluster
-                                deleteLineContributions(accumulator, (*coch).centroid, contributions);
+                                // debug: reset cluster mat------------------
+                                //cvtColor(erased, clusterMat_V3, CV_GRAY2RGB);
+                                // ------------------------------------------
                             }
                         }
                     }
@@ -234,6 +282,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 // (they were lower than the previous threshold, and can now be admitted)
                 HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, THRESH_EQ);
                 HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 1.48353, threshold, &lines, THRESH_EQ);
+                //HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 3.05433, threshold, &lines, THRESH_EQ);
 
                 cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
             }
@@ -266,8 +315,8 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
             threshold = 20;
 
             // calculate hough domain for lines with angles [0°, 180°]
-            //HoughLinesCustom(hough_UC, rho, theta, 0., 3.14159, accumulator, &contributions);
-            //HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, THRESH_GT);
+            HoughLinesCustom(hough_UC, rho, theta, 0., 3.14159, accumulator, &contributions);
+            HoughLinesExtract (accumulator, numRho, numAngle, rho, theta, 0., threshold, &lines, THRESH_GT);
 
             cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
 
@@ -288,12 +337,12 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     }
 
     // show hough lines overlayed on image
-    namedWindow("HOUGH+IMAGE", WINDOW_AUTOSIZE);
-    imshow("HOUGH+IMAGE", showHough);
+    //namedWindow("HOUGH+IMAGE", WINDOW_AUTOSIZE);
+    //imshow("HOUGH+IMAGE", showHough);
 
     // show hough lines on component centroids
-    //namedWindow("HOUGH+CENTROIDS", WINDOW_AUTOSIZE);
-    //imshow("HOUGH+CENTROIDS", hough_UC);
+    namedWindow("CENTROIDS", WINDOW_AUTOSIZE);
+    imshow("CENTROIDS", hough_UC);
 
     // remove those black pixels from
     // the input image that are black in
@@ -307,7 +356,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
     // show result
     namedWindow("WITHOUT TEXT", WINDOW_AUTOSIZE);
-    imshow("WITHOUT TEXT", result);
+    imshow("WITHOUT TEXT", erased);
 
     // show clustering
     //imshow("CLUSTER", clusters);

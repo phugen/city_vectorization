@@ -10,12 +10,16 @@ class CollinearString
 {
 public:
 
-    CollinearString(std::vector<ConnectedComponent> cluster);
+    CollinearString(std::vector<ConnectedComponent> cluster, double avgHeight);
     ~CollinearString();
 
     std::vector<ConnectedComponent> comps; // all components that are part of this string
     std::vector<CollinearGroup> groups; // word groups in this string
     std::vector<CollinearPhrase> phrases; // phrases in this string
+
+    double avgHeight; // average height of all components in the image - TODO: put into localAvgHeight()) and make it public?
+    int groupNo; // actual number of assigned groups
+    int phraseNo; // actual number of assigned phrases
 
     // finds average height in a 5-neighborhood
     double localAvgHeight (std::vector<ConnectedComponent> cluster, int listPos);

@@ -13,8 +13,10 @@ using namespace cv;
 
 #include <iostream>
 
-CollinearString::CollinearString(vector<ConnectedComponent> cluster)
+CollinearString::CollinearString(vector<ConnectedComponent> cluster, double avgHeight)
 {
+    this->avgHeight = avgHeight; // average height across all MBRs
+
     this->comps = cluster;
     this->groups = vector<CollinearGroup>();
     this->phrases = vector<CollinearPhrase>();
@@ -43,24 +45,46 @@ double CollinearString::localAvgHeight (vector<ConnectedComponent> cluster, int 
     double localAvg = 0;
     int dim;
 
-
-    // account for comps near the start or end of the cluster list
-    listPos - 2 < 0 ? startPos = 0 : startPos = listPos - 2;
-    listPos + 2 >= (int) cluster.size() ? endPos = (int) cluster.size() - 1 : endPos = listPos + 2;
-
     // determine which MBR dimension to use by inspecting line angle
-    // [0°, 45°] = horizontal, vertical otherwise
-    if(cluster.at(listPos).houghLine[1] <= 0.785398)
-        dim = 0;
+    double angle = cluster.at(listPos).houghLine[1];
+
+    if(angle <= 0.785398) //|| angle >= 2.53073)
+        dim = 1; // line is somewhat vertical (0° - 45°), use X axis for height due to string orientation
     else
-        dim = 1;
+        dim = 0; // line is horizonal, use Y-axis for height
 
-    // calculate average height
-    for(int i = startPos; i <= endPos; i++)
-        localAvg += cluster.at(i).mbr_max[dim] - cluster.at(i).mbr_min[dim];
+    // only one component in the cluster
+    if(cluster.size() == 1)
+    {
+        // component is only 1 pixel wide or long
+        if(cluster.at(0).mbr_max[dim] == cluster.at(0).mbr_min[dim])
+            localAvg = 1;
 
+        else
+            localAvg = cluster.at(0).mbr_max[dim] - cluster.at(0).mbr_min[dim];
+    }
 
-    return (localAvg /= endPos - startPos);
+    else
+    {
+        // Account for comps near the start or end of the cluster list
+        listPos - 2 < 0 ? startPos = 0 : startPos = listPos - 2;
+        listPos + 2 >= (int) cluster.size() ? endPos = (int) cluster.size() - 1 : endPos = listPos + 2;
+
+        // calculate average height
+        for(int i = startPos; i <= endPos; i++)
+        {
+            // component is only 1 pixel wide or long
+            if(cluster.at(i).mbr_max[dim] == cluster.at(i).mbr_min[dim])
+                localAvg += 1;
+
+            else
+                localAvg += cluster.at(i).mbr_max[dim] - cluster.at(i).mbr_min[dim];
+        }
+
+        localAvg /= endPos - startPos;
+    }
+
+    return localAvg;
 }
 
 
@@ -167,8 +191,9 @@ void CollinearString::refine ()
         listpos = comp - comps.begin(); // get current position in component list
 
         // calculate inter-character and inter-word thresholds
+        // NOTE: Difference between LOCAL average height and average height.
         tc = localAvgHeight(this->comps, listpos);
-        tw = 2.5 * tc;
+        tw = 2.5 * this->avgHeight;
 
         // calculate distance from current component to the next
         // in the component list
@@ -203,7 +228,7 @@ void CollinearString::refine ()
             CollinearPhrase* curPhrase = &(this->phrases.at(phraseNumber));
             CollinearGroup* prevGroup = &(this->groups.at(groupNumber - 1));
 
-            if(distToNext < tw)
+            if(distToNext <= tw)
             {
                 // mark previous and current group as part of a phrase
                 prevGroup->type = 'p';
@@ -243,37 +268,8 @@ void CollinearString::refine ()
 
             }
         }
+
+
+    this->groupNo = groupNumber;
+    this->phraseNo = phraseNumber;
 }
-
-/*
-    double avgHeight, distToNext;
-
-    int oldsize = comps.size();
-    int newsize = -1;
-
-    // refine until stable - probably not needed
-    while( oldsize != newsize)
-    {
-        oldsize = comps.size();
-
-        for(auto comp = comps.begin(); comp != comps.end() - 1; comp++)
-        {
-            int listpos = comp - comps.begin();
-
-            // deletion invalidated position
-            if(listpos >= (int) comps.size())
-                break;
-
-            // Calculate average local height and distance to the neighboring component
-            avgHeight = localAvgHeight(comps, listpos);
-            distToNext = edgeToEdgeDistance(comps, listpos);
-            //distToNext = distanceBetweenPoints (comps.at(listpos).centroid, comps.at(listpos+1).centroid);
-
-            // if the inter-character distance is lower
-            // than the threshold, don't delete this component
-            if(distToNext < avgHeight)
-                comps.erase(comp);
-        }
-
-        newsize = comps.size();
-    }*/

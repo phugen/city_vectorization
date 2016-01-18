@@ -443,11 +443,12 @@ double distanceFromPolarLine (Vec2f point, Vec2f polarLine)
 
     // find two points on the line.
     Point begin = Point(0, (m * 0 + b));
-    Point end = Point (100000, (m * 100000 + b)); // unsafe - should be image->cols instead
+    Point end = Point (1, (m * 1 + b));
 
     // Calculate input point distance from line.
-    double normalLength = hypot(end.x - begin.x, end.y - begin.y);
-    double dist = (double) abs(((x - begin.x) * (end.y - begin.y) - (y - begin.y) * (end.x - begin.x)) / normalLength);
+    double t1 = abs((end.y - begin.y) * x - (end.x - begin.x) * y + (end.x * begin.y) - (end.y * begin.x));
+    double t2 = sqrt(pow(end.y - begin.y, 2) + pow(end.x - begin.x, 2));
+    double dist = (double) (t1 / t2);
 
     return dist;
 }
