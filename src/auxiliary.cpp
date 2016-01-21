@@ -321,6 +321,40 @@ bool isValidCoord (Vec2i* check)
 }
 
 
+// Calculates the area the MBR of a connected component
+// occupies.
+double getMBRArea(ConnectedComponent comp)
+{
+    // calculate component MBR area size
+    Vec2i pmin = comp.mbr_min;
+    Vec2i pmax = comp.mbr_max;
+
+    double area;
+
+    // component consists of only one pixel
+    if(pmin == pmax)
+        area = 1;
+
+    else
+    {
+        double len_A = sqrt(pow(pmin[1] - pmax[1], 2) + pow(pmin[0] - pmin[0], 2));
+        double len_B = sqrt(pow(pmin[1] - pmin[1], 2) + pow(pmin[0] - pmax[0], 2));
+
+        // Account for cases in which the MBR is a 1px line
+        if(len_A == 0)
+            area = len_B;
+
+        else if (len_B == 0)
+            area = len_A;
+
+        // otherwise: calculate MBR area normally
+        else
+            area = len_A * len_B;
+    }
+
+    return area;
+}
+
 // draw a line given in polar coordinates on the input image using the given color.
 void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
 {
@@ -384,9 +418,7 @@ double distanceBetweenPoints (Vec2i a, Vec2i b)
     return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
 }
 
-// Calculates the distance between a point and a line segment.
-// (= the length of the segment that is perpendicular to the
-// line segment and ends at the supplied point)
+// Calculates the distance between a point and a line.
 double distanceFromCartesianLine(Vec2i point, pair<Vec2i, Vec2i> linePoints)
 {
     int x = point[1];
@@ -398,26 +430,63 @@ double distanceFromCartesianLine(Vec2i point, pair<Vec2i, Vec2i> linePoints)
     int lp2_x = linePoints.second[1];
     int lp2_y = linePoints.second[0];
 
+    double segLength = distanceBetweenPoints(linePoints.first, linePoints.second);
 
-    // find length of the line segment
+    if (segLength == 0.)
+        return distanceBetweenPoints(point, linePoints.first);
+
+    double sqLen = segLength * segLength;
+    double t = ((x - lp1_x) * (lp2_x - lp1_x) + (y - lp1_y) * (lp2_y - lp1_y)) / sqLen;
+
+    return distanceBetweenPoints(point, Vec2i(lp1_y + t * (lp2_y - lp1_y), lp1_x + t * (lp2_x - lp1_x)));
+}
+
+// Calculates the distance between a point and a line segment.
+// (= the length of the segment that is perpendicular to the
+// line segment and ends at the supplied point)
+double distanceFromCartesianSegment(Vec2i point, pair<Vec2i, Vec2i> linePoints)
+{
+    int x = point[1];
+    int y = point[0];
+
+    int lp1_x = linePoints.first[1];
+    int lp1_y = linePoints.first[0];
+
+    int lp2_x = linePoints.second[1];
+    int lp2_y = linePoints.second[0];
+
+
+    // find segment length
     double segLength = distanceBetweenPoints(linePoints.first, linePoints.second);
 
     // degenerated segment, so normal point to point distance is sufficient
     if (segLength == 0.)
         return distanceBetweenPoints(point, linePoints.first);
 
-    double t = ((x - lp1_x) * (lp2_x - lp1_x) + (y - lp1_y) * (lp2_y - lp1_y)) / segLength;
+    // find squared segment length
+    double sqLen = segLength * segLength;
 
-    // point is on the infinite line, so find out which
-    // line endpoint to use for the segment distance
+    // Find out if the orthogonal tangent that passes through (x, y) exists
+    double t = ((x - lp1_x) * (lp2_x - lp1_x) + (y - lp1_y) * (lp2_y - lp1_y)) / sqLen;
+
+
+    // An orthogonal line from the segment that goes through (x, y) does not exist,
+    // i.e. the segment would have to be extended in order for it to exist. Hence,
+    // the shortest distance is the distance from (x, y) to the appropriate endpoint of
+    // the line segment.
+
+    // Use starting point
     if (t < 0.)
         return distanceBetweenPoints(point, linePoints.first);
-    if (t > 1.)
+
+    // Use ending point
+    else if (t > 1.)
         return distanceBetweenPoints(point, linePoints.second);
 
-
-    // else, use normal distance to point
-    return distanceBetweenPoints(point, Vec2i(lp1_y + t * (lp2_y - lp1_y), lp1_x + t * (lp2_x - lp1_x)));
+    // Else, calculate the distance between (x, y) and the intersection
+    // point on the line segment, which is the shortest distance.
+    else
+        return distanceBetweenPoints(point, Vec2i(lp1_y + t * (lp2_y - lp1_y), lp1_x + t * (lp2_x - lp1_x)));
 }
 
 
@@ -425,39 +494,40 @@ double distanceFromCartesianLine(Vec2i point, pair<Vec2i, Vec2i> linePoints)
 // (for instance, the distance to Hough lines).
 double distanceFromPolarLine (Vec2f point, Vec2f polarLine)
 {
-    // cartesian coordinates of the point
-    double x = point[1];
-    double y = point[0];
-
-    // convert polar line pair (rho, theta)
+    // Convert polar line pair (rho, theta)
     // to cartesian coordinates (x, y) - the point
     // where the perpendicular line intersects
     // the origin line
     float poX = polarLine[0] * cos(polarLine[1]);
     float poY = polarLine[0] * sin(polarLine[1]);
 
-    // find cartesian equation equal to (rho, theta)
-    // (should also be possible directly but no idea how)
+    // Find cartesian equation equal to (rho, theta)
+    //
+    // TODO: Distance calculation should also be possible without
+    // this transformation, but no idea how
     double m; poX == 0 ? m = (-1. / INT_MAX) : m = -1. / ((poY - 0) / (poX - 0));
     double b = -(m * poX) + poY;
 
-    // find two points on the line.
-    Point begin = Point(0, (m * 0 + b));
-    Point end = Point (1, (m * 1 + b));
+    // Find two points on the line.
+    double lp1_x = 0.;
+    double lp1_y = m * lp1_x + b;
 
-    // Calculate input point distance from line.
-    double t1 = abs((end.y - begin.y) * x - (end.x - begin.x) * y + (end.x * begin.y) - (end.y * begin.x));
-    double t2 = sqrt(pow(end.y - begin.y, 2) + pow(end.x - begin.x, 2));
-    double dist = (double) (t1 / t2);
+    double lp2_x = 1.;
+    double lp2_y = m * lp2_x + b;
 
-    return dist;
+    // Calculate distance from input point to line
+    // ( = length of the orthogonal tangent of the line that
+    // passes through the input point).
+    return distanceFromCartesianLine(point, make_pair(Vec2i(lp1_y, lp1_x), Vec2i(lp2_y, lp2_x)));
 }
 
 // Checks if a point is on a polar line or not.
 // Uses a tolerance to cope with floating point values.
 bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance)
 {
-    if (distanceFromPolarLine(point, polarLine) <= tolerance)
+    double dist = distanceFromPolarLine(point, polarLine);
+
+    if (dist <= tolerance)
         return true;
     else
         return false;

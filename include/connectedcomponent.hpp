@@ -23,7 +23,8 @@ class ConnectedComponent
         cv::Vec2i seed; // (col, row)-Coordinates of the first found pixel of this component.
         cv::Vec2i centroid; // The midpoint of this component's MBR
         cv::Vec2f houghLine; // Hough line associated with this component (if any).
-        int numPixels; // number of black pixels in this component
+        int area; // total area occupied by this component's MBR
+        int numBlackPixels; // number of black pixels in this component
 
         // Constructors:
        ConnectedComponent(cv::Vec2i newmin, cv::Vec2i newmax, int newPixels, cv::Vec2i seed);

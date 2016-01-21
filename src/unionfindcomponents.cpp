@@ -276,7 +276,7 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
 
 
 
-    // retrieve MBRs and show them
+    // Retrieve MBRs, store them and show them
     for(set<int>::iterator iter = trueLabels.begin(); iter != trueLabels.end(); iter++)
     {
         // skip coordinates of invalid sets
@@ -294,6 +294,10 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
         // draw MBR for this component
         rectangle(showMBR, min, max, Scalar(0, 0, 255), 1, 8, 0);
     }
+
+    // debug? set areas for components
+    for(auto iter = components->begin(); iter != components->end(); iter++)
+        (*iter).area = getMBRArea(*iter);
 
     // cleanup
     //delete [] labels;

@@ -165,35 +165,8 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                                 cluster.push_back(*component);
                         }
 
-                // 9) Mark those components for deletion which still belong to
-                // the cluster even after the cluster area filter.
-                // These components will be deleted when all hough lines for
-                // this threshold have been evaluated to avoid destructive line overlap.
-                if(cluster.size() != 0)
-                {
-                    // apply area ratio filter to eliminate large components from the cluster
-                    // whose centroids are coincidentally on a string's hough line
-                    //clusterCompAreaFilter(&cluster, 5);
-                }
-
-                // 10.) Delete those values from the accumulator which were contributed
-                // to it by components which are still in the cluster by now and thus
-                // are marked for deletion anyway
-                for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
-                    deleteLineContributions(accumulator, (*comp).centroid, contributions);
-
-                // sort components in this cluster by their distance to the original hough line
-                sort(cluster.begin(), cluster.end(), compareByLineDistance);
-
-                //cout << "REFINE: " << cluster.size() << " -> ";
-
-                // Calculate component meta information and store it
-                CollinearString cs = CollinearString(cluster, avgheight);
-                cs.refine();
-                collinearStrings.push_back(cs);
-
                 // debug: show cluster MBRs---------------------------------------------
-                for(auto comp = cs.comps.begin(); comp != cs.comps.end(); comp++)
+                for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
                 {
                     ConnectedComponent c = *comp;
 
@@ -211,8 +184,51 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 //waitKey(0);
 
                 // reset cluster mat
+                //cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
+                //------------------------------------------------------------------
+
+                // 9) Mark those components for deletion which still belong to
+                // the cluster even after the cluster area filter.
+                // These components will be deleted when all hough lines for
+                // this threshold have been evaluated to avoid destructive line overlap.
+                if(cluster.size() != 0)
+                {
+                    // apply area ratio filter to eliminate large components from the cluster
+                    // whose centroids are coincidentally on a string's hough line
+                    clusterCompAreaFilter(&cluster, 15);
+                }
+
+                // debug: show cluster MBRs FILTERED ---------------------------------------------
+                for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
+                {
+                    ConnectedComponent c = *comp;
+                    Point min = Vec2i(c.mbr_min[1], c.mbr_min[0]);
+                    Point max = Vec2i(c.mbr_max[1], c.mbr_max[0]);
+                    rectangle(clusterMat_V3, min, max, Scalar(0, 255, 0), 1, 8, 0);
+                }
+
+                namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
+                imshow("CURRENT CLUSTER", clusterMat_V3);
+
+                //waitKey(0);
+
+                // reset cluster mat
                 cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
                 //------------------------------------------------------------------
+
+                // 10.) Delete those values from the accumulator which were contributed
+                // to it by components which are still in the cluster by now and thus
+                // are marked for deletion anyway
+                for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
+                    deleteLineContributions(accumulator, (*comp).centroid, contributions);
+
+                // sort components in this cluster by their distance to the original hough line
+                sort(cluster.begin(), cluster.end(), compareByLineDistance);
+
+                // Calculate component meta information and store it
+                CollinearString cs = CollinearString(cluster, avgheight);
+                cs.refine();
+                collinearStrings.push_back(cs);
 
                 // clustering for this hough line is done
                 cluster.clear();
@@ -235,7 +251,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                         // exceed the current threshold - since the threshold
                         // signalizes how long the string is an drops from
                         // highest (longest) to lowest (shortest).
-                        if(current.size() + 1 >= threshold && current.size() > 1)
+                        if(current.size() + 1 > threshold && current.size() > 2)
                         {
                             if(current.size() != 1)
                                 cout << current.size() + 1 << " >= " << threshold << "\n";
@@ -343,16 +359,6 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     // show hough lines on component centroids
     namedWindow("CENTROIDS", WINDOW_AUTOSIZE);
     imshow("CENTROIDS", hough_UC);
-
-    // remove those black pixels from
-    // the input image that are black in
-    // the extracted text image
-    Mat result = input.clone();
-
-    for(int i = 0; i < erased.rows; i++)
-        for(int j = 0; j < erased.cols; j++)
-            if(erased.at<uchar>(i, j) == 0)
-                result.at<uchar>(i, j) = 255;
 
     // show result
     namedWindow("WITHOUT TEXT", WINDOW_AUTOSIZE);
