@@ -15,25 +15,27 @@
  */
 class ConnectedComponent
 {
-    public:
-        // left those vars public because the way they're retrieved
-        // is not likely to be changed, so no need to encapsulate them
+public:
+    // Constructors:
+    ConnectedComponent();
+    ConnectedComponent(cv::Vec2i newmin, cv::Vec2i newmax, int newPixels, cv::Vec2i seed);
+    ~ConnectedComponent();
 
-        cv::Vec2i mbr_min, mbr_max; // min and max coordinates of MBR
-        cv::Vec2i seed; // (col, row)-Coordinates of the first found pixel of this component.
-        cv::Vec2i centroid; // The midpoint of this component's MBR
-        cv::Vec2f houghLine; // Hough line associated with this component (if any).
-        int area; // total area occupied by this component's MBR
-        int numBlackPixels; // number of black pixels in this component
+    bool operator == (const ConnectedComponent other);
 
-        // Constructors:
-       ConnectedComponent(cv::Vec2i newmin, cv::Vec2i newmax, int newPixels, cv::Vec2i seed);
-       ~ConnectedComponent();
+    // overwrite << operator to output information about this component
+    friend std::ostream& operator << (std::ostream& stream, const ConnectedComponent& obj);
 
-       bool operator == (const ConnectedComponent other);
 
-       // overwrite << operator to output information about this component
-       friend std::ostream& operator << (std::ostream& stream, const ConnectedComponent& obj);
+    // left those vars public because the way they're retrieved
+    // is not likely to be changed, so no need to encapsulate them
+
+    cv::Vec2i mbr_min, mbr_max; // min and max coordinates of MBR
+    cv::Vec2i seed; // (col, row)-Coordinates of the first found pixel of this component.
+    cv::Vec2i centroid; // The midpoint of this component's MBR
+    cv::Vec2f houghLine; // Hough line associated with this component (if any).
+    int area; // total area occupied by this component's MBR
+    int numBlackPixels; // number of black pixels in this component
 };
 
 #endif // CONNECTEDCOMPONENT_HPP

@@ -48,10 +48,15 @@ bool sortByMBRArea (ConnectedComponent a, ConnectedComponent b)
     return a.area < b.area;
 }
 
-// Remove components from this string until the ratio from the largest
-// to the smallest is equal to or smaller than the input ratio.
+// Remove components from this cluster until the ratio from the largest
+// to the smallest is equal to or smaller than the input ratio (or the
+// cluster consists of only one element).
 void clusterCompAreaFilter(vector<ConnectedComponent>* cluster, int ratio)
 {
+    // Nonsensical ratio
+    if(ratio < 1)
+        { cout << "clusterCompAreaFilter: Ratio " << ratio << " is < 1!\n"; return; }
+
     // no ratio filtering needed
     if(cluster->size() == 0 || cluster->size() == 1)
         return;
@@ -61,12 +66,28 @@ void clusterCompAreaFilter(vector<ConnectedComponent>* cluster, int ratio)
 
     // while the max_area / min_area is > ratio,
     // mark elements for deletion
-    auto from = cluster->end();
+    auto to = cluster->begin();
+    auto from = cluster->end() - 1;
 
-    //if(min_area == 1) min_area = median(list);
-    while(cluster->at((from - 1) - cluster->begin()).area / cluster->at(0).area > ratio)
-        from--;
+    // Drop components from the cluster until the ratio is obeyed.
+    // Always drop either the minimum or maximum element, depending
+    // on which has the larger difference to its neighbor.
+    while((cluster->at(from - cluster->begin()).area) / (cluster->at(to - cluster->begin()).area) > ratio &&
+           to != from)
+    {
+        // find out which outlier has a greater local difference
+        // and mark it for deletion
+        int lowDiff = localAreaDiff(*cluster, (to - cluster->begin()), false); //(*(to + 1)).area - (*to).area;
+        int highDiff = localAreaDiff(*cluster, (from - cluster->begin()), true); //(*from).area - (*(from - 1)).area;
 
-    // delete all components that are too large
-    cluster->erase(from, cluster->end());
+        if(lowDiff > highDiff)
+            to++;
+
+        else
+            from--;
+    }
+
+    // get subvector excluding those components
+    // that were marked for deletion
+    *cluster = vector<ConnectedComponent>(to, from + 1);
 }

@@ -17,7 +17,6 @@ public:
     std::vector<CollinearGroup> groups; // word groups in this string
     std::vector<CollinearPhrase> phrases; // phrases in this string
 
-    double avgHeight; // average height of all components in the image - TODO: put into localAvgHeight()) and make it public?
     int groupNo; // actual number of assigned groups
     int phraseNo; // actual number of assigned phrases
 

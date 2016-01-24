@@ -19,7 +19,6 @@ void eraseComponentPixels (ConnectedComponent comp, cv::Mat* image);
 
 double getMBRArea(ConnectedComponent comp);
 bool isValidCoord (cv::Vec2i* check);
-void mapHoughToImage (int rows, int cols, float theta, float rho, int numAngle, int numRho, int* accumulator);
 
 void drawLines (std::vector<cv::Vec2f> lines, cv::Mat* image, cv::Scalar color);
 
@@ -30,6 +29,7 @@ double distanceFromPolarLine (cv::Vec2f point, cv::Vec2f polarLine);
 bool pointOnPolarLine (cv::Vec2f point, cv::Vec2f polarLine, double tolerance);
 
 double localAvgHeight (std::vector<ConnectedComponent> cluster, int listPos);
+int localAreaDiff (std::vector<ConnectedComponent> cluster, int listPos, bool rev);
 
 
 

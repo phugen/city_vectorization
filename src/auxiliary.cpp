@@ -139,54 +139,6 @@ vector<Vec2i> pointToVec (vector<Point> pl)
     return ret;
 }
 
-// Maps Hough accumulator values to the pixel constraints of an image.
-void mapHoughToImage (int rows, int cols, float theta, float rho, int numAngle, int numRho, int* accumulator)
-{
-    Mat overlay = Mat(rows, cols, CV_8U);
-    overlay.setTo(0);
-
-    int minacc = INT_MAX;
-    int maxacc = 0;
-
-    // re-usable cosine and sine values.
-    float cos_v[numAngle];
-    float sin_v[numAngle];
-
-    for (int i = 0; i < numAngle; i++)
-    {
-        cos_v[i] = cos(i * theta);
-        sin_v[i] = sin(i * theta);
-    }
-
-    // find min/max accum value
-    for( int i = 0; i < rows; i++ )
-        for( int j = 0; j < cols; j++ )
-            for( int n = 0; n < numAngle; n++ )
-            {
-                int r = cvRound( j * cos_v[n] + i * sin_v[n] );
-                r += (numRho - 1) / 2;
-
-                int value = accumulator[(n+1) * (numRho+2) + r+1];
-                minacc = min(value, minacc);
-                maxacc = max(value, maxacc);
-            }
-
-    // normalize to 0 - 255 based on min and max values
-    for( int i = 0; i < rows; i++ )
-        for( int j = 0; j < cols; j++ )
-            for(int n = 0; n < numAngle; n++ )
-            {
-                int r = cvRound( j * cos(n * theta) + i * sin(n * theta) );
-                r += (numRho - 1) / 2;
-
-                int value = accumulator[(n+1) * (numRho+2) + r+1];
-                overlay.at<uchar>(i, j) = (255 * (value - minacc)) / (maxacc - minacc);
-            }
-
-    namedWindow("OVERLAY", WINDOW_AUTOSIZE);
-    imshow("OVERLAY", overlay);
-}
-
 // Returns all black pixels that can be reached
 // from the input pixel, including the pixel itself (DFS).
 // Expects a binary (CV_U8 / CV_U8C1) matrix.
@@ -360,18 +312,14 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
 {
     for(size_t i = 0; i < lines.size(); i++)
     {
-        float rho = lines[i][0];
-        float theta = lines[i][1];
+        // Convert polar line pair (rho, theta)
+        // to cartesian coordinates (x, y) - the point
+        // where the perpendicular line intersects
+        // the origin line
+        float poX = lines[i][0] * cos(lines[i][1]);
+        float poY = lines[i][0] * sin(lines[i][1]);
 
-        // To find the actual line, find the line that is perpendicular
-        // to the line through the origin (0, 0) and (rho, theta) and
-        // which intersects the line at (rho, theta).
-
-        // convert intersection point coordinates from
-        // polar to cartesian coordinates
-        double xi = rho * cos(theta);
-        double yi = rho * sin(theta);
-
+        // Find cartesian equation equal to (rho, theta)
         // Find the slope of the line through the origin (0,0) and the
         // converted intersection point (rho, theta).
         // This line is perpendicular, so its slope is the inverse of
@@ -380,27 +328,29 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
         double m;
 
         // vertical line
-        if (xi == 0)
+        if (poX == 0)
             m = INT_MAX;
 
         // horizontal line
-        else if (yi == 0)
+        else if (poY == 0)
             m = 0;
 
         // normal slope
         else
-            m = -1. / ((yi - 0) / (xi - 0));
+            m = -1. / ((poY - 0) / (poX - 0));
 
-        // Since the intersection point (x, y) is known, we can now
-        // solve the line equation y = m*x + b for b: b = -(m*x) + y
-        double b = -(m * xi) + yi;
+        double b = -(m * poX) + poY;
 
-        // draw line across the whole image
-        Point pt1(0, m * 0 + b);
-        Point pt2(image->cols, m * (image->cols) + b);
+        // Find two points on the line.
+        double lp1_x = poX - image->cols;
+        double lp1_y = m * lp1_x + b;
+        Point pt1 = Point(lp1_x, lp1_y);
 
-        // choose line color automatically based on range (0, size_of_list)
-        //Scalar color = intToRGB(Vec2i(0, lines.size()), i);
+        double lp2_x = poX + image->cols;
+        double lp2_y = m * lp2_x + b;
+        Point pt2 = Point(lp2_x, lp2_y);
+
+        cout << "POLAR: " << "(" << lines[i][0] << ", " << lines[i][1]/0.0174533 << "), CART: " << pt1 << " to " << pt2 << "\n";
 
         line(*image, pt1, pt2, color, 1);
     }
@@ -498,21 +448,34 @@ double distanceFromPolarLine (Vec2f point, Vec2f polarLine)
     // to cartesian coordinates (x, y) - the point
     // where the perpendicular line intersects
     // the origin line
-    float poX = polarLine[0] * cos(polarLine[1]);
-    float poY = polarLine[0] * sin(polarLine[1]);
+    double poX = (double) polarLine[0] * cos(polarLine[1]);
+    double poY = (double) polarLine[0] * sin(polarLine[1]);
 
     // Find cartesian equation equal to (rho, theta)
     //
     // TODO: Distance calculation should also be possible without
     // this transformation, but no idea how
-    double m; poX == 0 ? m = (-1. / INT_MAX) : m = -1. / ((poY - 0) / (poX - 0));
+    double m;
+
+    // vertical line
+    if (poX == 0)
+        m = INT_MAX;
+
+    // horizontal line
+    else if (poY == 0)
+        m = 0;
+
+    // normal slope
+    else
+        m = -1. / ((poY - 0) / (poX - 0));
+
     double b = -(m * poX) + poY;
 
     // Find two points on the line.
-    double lp1_x = 0.;
-    double lp1_y = m * lp1_x + b;
+    double lp1_x = poX;
+    double lp1_y =  m * lp1_x + b;
 
-    double lp2_x = 1.;
+    double lp2_x = poX + 1;
     double lp2_y = m * lp2_x + b;
 
     // Calculate distance from input point to line
@@ -563,4 +526,35 @@ void clusterCells (int totalNumberCells, float rhoStep, int numRho, Vec2f primar
 
     for(double z = rhoclst_start; z <= rhoclst_end; z+=rhoStep)
         clusterLines->push_back(Vec2f(z, lTheta));
+}
+
+// Finds the highest local difference in area size in
+// a 5-neighborhood (if possible).
+int localAreaDiff (vector<ConnectedComponent> cluster, int listPos, bool rev)
+{
+    int startPos, endPos;
+    int maxdiff = -1;
+    int n;
+
+    cluster.size() >= 5 ? n = 2 : n = 1; // find feasible neighborhood size
+
+    // Set neighbor positions to inspect
+    if(!rev) // normal, to the right of input
+    {
+        startPos = listPos;
+        listPos + n >= (int) cluster.size() ? endPos = (int) cluster.size() - 1 : endPos = listPos + n;
+    }
+
+    else // reverse, to the left of input
+    {
+        listPos - n < 0 ? startPos = 0 : startPos = listPos - n;
+        endPos = listPos;
+    }
+
+    // calculate maximum area difference
+    for(int i = startPos; i < endPos; i++)
+        maxdiff = max(maxdiff, cluster.at(i+1).area - cluster.at(i).area);
+
+
+    return maxdiff;
 }

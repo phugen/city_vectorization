@@ -12,6 +12,9 @@
 using namespace std;
 using namespace cv;
 
+ConnectedComponent::ConnectedComponent()
+{}
+
 ConnectedComponent::ConnectedComponent(Vec2i newmin, Vec2i newmax, int newPixels, Vec2i seed)
 {
     this->mbr_min = newmin;
@@ -32,6 +35,7 @@ ConnectedComponent::~ConnectedComponent(){}
 bool ConnectedComponent::operator == (const ConnectedComponent other)
 {
     // define equality as having the same bounding box
+    // (which isn't really exact but suffices our needs)
     if(mbr_min == other.mbr_min && mbr_max == other.mbr_max)
         return true;
     else

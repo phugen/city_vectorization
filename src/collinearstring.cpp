@@ -15,18 +15,17 @@ using namespace cv;
 
 CollinearString::CollinearString(vector<ConnectedComponent> cluster, double avgHeight)
 {
-    this->avgHeight = avgHeight; // average height across all MBRs
-
     this->comps = cluster;
+
+    // DEBUG: Init as 100 groups; find a way to make this dynamic
+    // that works with the classification process in refine()
     this->groups = vector<CollinearGroup>();
+    for(int i = 0; i < 100; i++)
+        this->groups.push_back(CollinearGroup());
+
     this->phrases = vector<CollinearPhrase>();
-
-    // initialize vectors with 100 elements
-    for(size_t i = 0; i < 100; i++) // DEBUG: hardcoded!
-        groups.push_back(CollinearGroup());
-
-    for(size_t i = 0; i < 100; i++) // DEBUG: hardcoded!
-        phrases.push_back(CollinearPhrase());
+    this->groupNo = 0;
+    this->phraseNo = 0;
 }
 
 CollinearString::~CollinearString()
@@ -128,13 +127,12 @@ double CollinearString::edgeToEdgeDistance (vector<ConnectedComponent> cluster, 
     pair<Vec2i, Vec2i> right_2 =  make_pair(bot_right_2, top_right_2);
     pair<Vec2i, Vec2i> top_2 =  make_pair(top_right_2, top_left_2);
 
-    // First test if MBRs overlap - if they do, we'll consider the distance zero.
-
+    // First test if MBRs overlap - if they do, we'll consider the distance zero:
     // Check X-dimension and Y-dimension overlap.
     // Which of the two points on the line is chosen doesn't matter
     // since the checked dimension is always the same for both.
     if(!(left_1.first[1] < right_2.first[1]) && !(right_1.first[1] > left_2.first[1]) &&
-       !(top_1.first[0] > bottom_2.first[0]) && !(bottom_1.first[0] < top_2.first[0]))
+            !(top_1.first[0] > bottom_2.first[0]) && !(bottom_1.first[0] < top_2.first[0]))
         return 0.;
 
 
@@ -157,12 +155,12 @@ double CollinearString::edgeToEdgeDistance (vector<ConnectedComponent> cluster, 
     // Distances from points of MBR1 to sides of MBR2
     for(auto p1 = mbr1_points.begin(); p1 != mbr1_points.end(); p1++)
         for(auto side2 = mbr2_sides.begin(); side2 != mbr2_sides.end(); side2++)
-            min_dist = min(min_dist, distanceFromCartesianLine(*p1, *side2));
+            min_dist = min(min_dist, distanceFromCartesianSegment(*p1, *side2));
 
     // Distances from points of MBR2 to sides of MBR1
     for(auto p2 = mbr2_points.begin(); p2 != mbr2_points.end(); p2++)
         for(auto side1 = mbr1_sides.begin(); side1 != mbr1_sides.end(); side1++)
-            min_dist = min(min_dist, distanceFromCartesianLine(*p2, *side1));
+            min_dist = min(min_dist, distanceFromCartesianSegment(*p2, *side1));
 
     return min_dist;
 }
@@ -173,27 +171,58 @@ double CollinearString::edgeToEdgeDistance (vector<ConnectedComponent> cluster, 
 void CollinearString::refine ()
 {
     // Single, isolated component
-    if(this->comps.size() < 2)
+    if(this->comps.size() == 1)
+    {
+        CollinearGroup gr;
+        gr.type = 'i';
+        gr.chars.push_back(comps.at(0));
+        this->groups.push_back(gr);
+
+        CollinearPhrase phr;
+        phr.words.push_back(gr);
+        this->phrases.push_back(phr);
+
+        groupNo = 1;
+        phraseNo = 1;
+
         return;
+    }
 
     double tc, tw; // character and word thresholds
     double distToNext; // distance to next component
 
     int listpos = 0; // position of current component in the list
+
+    int oldGroupNumber = -1; // for checking if the group count advanced
     int groupNumber = 0; // current word count
+
+    int oldPhraseNumber = -1; // for checking if the phrase count advanced
     int phraseNumber = 0; // current phrase count
 
     // 2.) Check inter-character distances until
     // a component doesn't satisfy the threshold.
     for(auto comp = this->comps.begin(); comp != this->comps.end() - 1; comp++)
     {
-        CollinearGroup* curGroup = &(this->groups.at(groupNumber)); // get current group
+        // add new group if needed
+        /*if(groupNumber != oldGroupNumber)
+        {
+            this->groups.push_back(CollinearGroup());
+            oldGroupNumber = groupNumber;
+        }*/
+
+        // add new phrase if needed
+        if(phraseNumber != oldPhraseNumber)
+        {
+            this->phrases.push_back(CollinearPhrase());
+            oldPhraseNumber = phraseNumber;
+        }
+
         listpos = comp - comps.begin(); // get current position in component list
+        CollinearGroup* curGroup = &this->groups.at(groupNumber); // shorthand ref
 
         // calculate inter-character and inter-word thresholds
-        // NOTE: Difference between LOCAL average height and average height.
         tc = localAvgHeight(this->comps, listpos);
-        tw = 2.5 * this->avgHeight;
+        tw = 2.5 * tc;
 
         // calculate distance from current component to the next
         // in the component list
@@ -209,7 +238,7 @@ void CollinearString::refine ()
         // i and i+1 are part of the same word
         if(distToNext <= tc)
         {
-           curGroup->chars.push_back(this->comps.at(listpos + 1)); // tail
+            curGroup->chars.push_back(this->comps.at(listpos + 1)); // tail
 
             // if the word doesn't belong to a phrase already,
             // mark it as a word
@@ -226,9 +255,10 @@ void CollinearString::refine ()
             // inter-word threshold "tw", then the previous word and the
             // current component belong to the same phrase.
             CollinearPhrase* curPhrase = &(this->phrases.at(phraseNumber));
-            CollinearGroup* prevGroup = &(this->groups.at(groupNumber - 1));
+            CollinearGroup* prevGroup = curGroup;
+            curGroup = &this->groups.at(groupNumber);
 
-            if(distToNext <= tw)
+            if(distToNext < tw)
             {
                 // mark previous and current group as part of a phrase
                 prevGroup->type = 'p';
@@ -245,6 +275,18 @@ void CollinearString::refine ()
                 phraseNumber++;
         }
     }
+
+    // there is only one phrase, so link the current
+    // groups to it
+    if(phraseNumber == 0)
+    {
+        for(auto grp = this->groups.begin(); grp != this->groups.end(); grp++)
+        {
+            (*grp).type = 'p';
+            this->phrases.at(0).words.push_back(*grp);
+        }
+    }
+
 
     // 4.) Search for consecutive isolated groups in phrases. If there are
     // cases in which there are two or more consecutive isolated groups in
@@ -270,6 +312,6 @@ void CollinearString::refine ()
         }
 
 
-    this->groupNo = groupNumber;
-    this->phraseNo = phraseNumber;
+    this->groupNo = groupNumber + 1;
+    this->phraseNo = phraseNumber + 1;
 }

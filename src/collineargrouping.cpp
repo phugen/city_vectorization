@@ -23,12 +23,12 @@ using namespace std;
 using namespace cv;
 
 
-// A < B, if its A's distance to the associated hough line
-// is smaller than B's distance to the same (!) hough line.
+// Compare two components that lie on the same Hough line
+// by their distance along the line, i.e. their centroid's
+// X coordinate.
 bool compareByLineDistance (ConnectedComponent a, ConnectedComponent b)
 {
-    return (distanceFromPolarLine(a.centroid, a.houghLine) <
-            (distanceFromPolarLine(b.centroid, b.houghLine)));
+    return (a.centroid[1]) < (b.centroid[1]);
 }
 
 // Performs collinear grouping and deletion of potential characters
@@ -178,10 +178,15 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                     rectangle(clusterMat_V3, min, max, Scalar(255, 0, 0), 1, 8, 0);
                 }
 
+                vector<Vec2f> oneline;
+                oneline.push_back(*houghLine);
+                drawLines(oneline, &clusterMat_V3, Scalar(0, 0, 255));
+                drawLines(clusterLines, &clusterMat_V3, Scalar(255, 0, 0));
+
                 namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
                 imshow("CURRENT CLUSTER", clusterMat_V3);
 
-                //waitKey(0);
+                waitKey(0);
 
                 // reset cluster mat
                 //cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
@@ -195,7 +200,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 {
                     // apply area ratio filter to eliminate large components from the cluster
                     // whose centroids are coincidentally on a string's hough line
-                    clusterCompAreaFilter(&cluster, 15);
+                    clusterCompAreaFilter(&cluster, 5);
                 }
 
                 // debug: show cluster MBRs FILTERED ---------------------------------------------
@@ -210,7 +215,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
                 imshow("CURRENT CLUSTER", clusterMat_V3);
 
-                //waitKey(0);
+                waitKey(0);
 
                 // reset cluster mat
                 cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
@@ -226,9 +231,12 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 sort(cluster.begin(), cluster.end(), compareByLineDistance);
 
                 // Calculate component meta information and store it
-                CollinearString cs = CollinearString(cluster, avgheight);
-                cs.refine();
-                collinearStrings.push_back(cs);
+                if(cluster.size() != 0)
+                {
+                    CollinearString cs = CollinearString(cluster, avgheight);
+                    cs.refine();
+                    collinearStrings.push_back(cs);
+                }
 
                 // clustering for this hough line is done
                 cluster.clear();
@@ -251,30 +259,12 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                         // exceed the current threshold - since the threshold
                         // signalizes how long the string is an drops from
                         // highest (longest) to lowest (shortest).
-                        if(current.size() + 1 > threshold && current.size() > 2)
+                        if(current.size() > threshold && current.size() > 2)
                         {
-                            if(current.size() != 1)
-                                cout << current.size() + 1 << " >= " << threshold << "\n";
+                            cout << current.size() << " > " << threshold << "\n";
 
                             for(auto coch = current.chars.begin(); coch != current.chars.end(); coch++)
                             {
-                                // DEBUG: Draw MBR of component to be deleted-----------
-                                /*ConnectedComponent c = *coch;
-
-                                // rectangle works with (col,row), so swap coordinates
-                                Point min = Vec2i(c.mbr_min[1], c.mbr_min[0]);
-                                Point max = Vec2i(c.mbr_max[1], c.mbr_max[0]);
-
-                                // draw MBR for this component
-                                rectangle(clusterMat_V3, min, max, Scalar(255, 0, 0), 1, 8, 0);
-
-                                namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
-                                imshow("CURRENT CLUSTER", clusterMat_V3);*/
-
-                                //waitKey(0);
-                                //-------------------------------------------------------
-
-
                                 // erase the pixels associated with the current
                                 // component from the output image
                                 eraseComponentPixels(*coch, &erased);
