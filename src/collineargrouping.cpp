@@ -22,6 +22,8 @@
 using namespace std;
 using namespace cv;
 
+//#define DEBUG
+
 
 // Compare two components that lie on the same Hough line
 // by their distance along the line, i.e. their centroid's
@@ -137,11 +139,14 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 // the rho resolution guess.
                 for(vector<Vec2f>::iterator clLine = clusterLines.begin(); clLine != clusterLines.end(); clLine++)
                     for(vector<ConnectedComponent>::iterator component = comps->begin(); component != comps->end(); component++)
-                        if(pointOnPolarLine((*component).centroid, *clLine, 1.))
+                    {
+                        if(pointOnPolarLine((*component).centroid, *clLine, 2, &clusterMat_V3))
                         {
                             cluster.push_back(*component);
                             avgheight += (*component).mbr_max[0] - (*component).mbr_min[0];
                         }
+                    }
+
 
                 // 7) Compute new clustering factor
                 // (= amount of rho cells to cluster)
@@ -155,7 +160,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 // find all components that lie in close proximity (= "on") a cluster line
                 for(vector<Vec2f>::iterator clLine = clusterLines.begin(); clLine != clusterLines.end(); clLine++)
                     for(vector<ConnectedComponent>::iterator component = comps->begin(); component != comps->end(); component++)
-                        if(pointOnPolarLine((*component).centroid, *clLine, 1.))
+                        if(pointOnPolarLine((*component).centroid, *clLine, 2, &clusterMat_V3))
                         {
                             // associate current Hough line with the component
                             (*component).houghLine = *houghLine;
@@ -164,6 +169,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                             if(find(cluster.begin(), cluster.end(), *component) == cluster.end())
                                 cluster.push_back(*component);
                         }
+
 
                 // debug: show cluster MBRs---------------------------------------------
                 for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
@@ -178,18 +184,21 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                     rectangle(clusterMat_V3, min, max, Scalar(255, 0, 0), 1, 8, 0);
                 }
 
-                vector<Vec2f> oneline;
-                oneline.push_back(*houghLine);
-                drawLines(oneline, &clusterMat_V3, Scalar(0, 0, 255));
-                drawLines(clusterLines, &clusterMat_V3, Scalar(255, 0, 0));
 
-                namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
-                imshow("CURRENT CLUSTER", clusterMat_V3);
+                #ifdef DEBUG
+                    vector<Vec2f> oneline;
+                    oneline.push_back(*houghLine);
+                    drawLines(oneline, &clusterMat_V3, Scalar(0, 0, 255));
+                    drawLines(clusterLines, &clusterMat_V3, Scalar(255, 0, 0));
 
-                waitKey(0);
+                    waitKey(0);
 
-                // reset cluster mat
-                //cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
+
+                    // reset cluster mat
+                    //cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
+                #endif
+
+
                 //------------------------------------------------------------------
 
                 // 9) Mark those components for deletion which still belong to
@@ -215,17 +224,21 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
                 imshow("CURRENT CLUSTER", clusterMat_V3);
 
-                waitKey(0);
+                #ifdef DEBUG
+                    waitKey(0);
 
-                // reset cluster mat
-                cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
+                    // reset cluster mat
+                    cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
+                #endif
                 //------------------------------------------------------------------
 
                 // 10.) Delete those values from the accumulator which were contributed
                 // to it by components which are still in the cluster by now and thus
                 // are marked for deletion anyway
+
+                // STILL BUGGY.
                 for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
-                    deleteLineContributions(accumulator, (*comp).centroid, contributions);
+                    //deleteLineContributions(accumulator, (*comp).centroid, contributions);
 
                 // sort components in this cluster by their distance to the original hough line
                 sort(cluster.begin(), cluster.end(), compareByLineDistance);
@@ -259,9 +272,9 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                         // exceed the current threshold - since the threshold
                         // signalizes how long the string is an drops from
                         // highest (longest) to lowest (shortest).
-                        if(current.size() > threshold && current.size() > 2)
+                        if(current.size() >= threshold && current.size() > 2)
                         {
-                            cout << current.size() << " > " << threshold << "\n";
+                            cout << current.size() << " >= " << threshold << "\n";
 
                             for(auto coch = current.chars.begin(); coch != current.chars.end(); coch++)
                             {

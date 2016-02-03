@@ -210,9 +210,15 @@ vector<Vec2i> getBlackComponentPixels (Vec2i pixel, Mat* image)
 // Erase all black pixels that belong to a component.
 void eraseComponentPixels (ConnectedComponent comp, Mat* image)
 {
-    // starting pixel for connecting pixel search
+    // Set component's seed as starting pixel
     Vec2i seed = comp.seed;
 
+    eraseConnectedPixels(seed, image);
+}
+
+// Erase all black pixels connected to the input pixel.
+void eraseConnectedPixels(Vec2i seed, Mat* image)
+{
     // check if seed is out of bounds
     if(seed[0] < 0 || seed[0] > image->rows ||
             seed[1] < 0 || seed[1] > image->cols)
@@ -341,6 +347,7 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
 
         double b = -(m * poX) + poY;
 
+
         // Find two points on the line.
         double lp1_x = poX - image->cols;
         double lp1_y = m * lp1_x + b;
@@ -350,14 +357,14 @@ void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
         double lp2_y = m * lp2_x + b;
         Point pt2 = Point(lp2_x, lp2_y);
 
-        cout << "POLAR: " << "(" << lines[i][0] << ", " << lines[i][1]/0.0174533 << "), CART: " << pt1 << " to " << pt2 << "\n";
+        //cout << "POLAR: " << "(" << lines[i][0] << ", " << lines[i][1]/0.0174533 << "), CART: " << pt1 << " to " << pt2 << "\n";
 
         line(*image, pt1, pt2, color, 1);
     }
 }
 
 // Calculates the cartesian distance between two points in 2D space.
-double distanceBetweenPoints (Vec2i a, Vec2i b)
+double distanceBetweenPoints (Vec2f a, Vec2f b)
 {
     int x1 = a[1];
     int y1 = a[0];
@@ -369,41 +376,53 @@ double distanceBetweenPoints (Vec2i a, Vec2i b)
 }
 
 // Calculates the distance between a point and a line.
-double distanceFromCartesianLine(Vec2i point, pair<Vec2i, Vec2i> linePoints)
+double distanceFromCartesianLine(Vec2f point, pair<Vec2f, Vec2f> linePoints, Mat* image)
 {
-    int x = point[1];
-    int y = point[0];
+    double x = point[1];
+    double y = point[0];
 
-    int lp1_x = linePoints.first[1];
-    int lp1_y = linePoints.first[0];
+    double lp1_x = linePoints.first[1];
+    double lp1_y = linePoints.first[0];
 
-    int lp2_x = linePoints.second[1];
-    int lp2_y = linePoints.second[0];
+    double lp2_x = linePoints.second[1];
+    double lp2_y = linePoints.second[0];
 
     double segLength = distanceBetweenPoints(linePoints.first, linePoints.second);
 
     if (segLength == 0.)
         return distanceBetweenPoints(point, linePoints.first);
 
-    double sqLen = segLength * segLength;
-    double t = ((x - lp1_x) * (lp2_x - lp1_x) + (y - lp1_y) * (lp2_y - lp1_y)) / sqLen;
+    double k = abs((lp2_y - lp1_y) * (x - lp1_x) - (lp2_x - lp1_x) * (y - lp1_y)) / (pow((lp2_y - lp1_y), 2) + pow((lp2_x - lp1_x), 2));
+    double dist = abs((lp2_x - lp1_x) * (lp1_y - y) - (lp1_x - x) * (lp2_y - lp1_y)) / sqrt(pow((lp2_x - lp1_x), 2) + pow((lp2_y - lp1_y), 2));
 
-    return distanceBetweenPoints(point, Vec2i(lp1_y + t * (lp2_y - lp1_y), lp1_x + t * (lp2_x - lp1_x)));
+    /*double sqLen = segLength * segLength;
+    double t = abs(((x - lp1_x) * (lp2_x - lp1_x) + (y - lp1_y) * (lp2_y - lp1_y))) / sqLen;*/
+
+    // perpendicular line intersection point on the original line
+    // error here !
+    Vec2f onLine = Vec2f(y + k * (lp2_x - lp1_x), x - k * (lp2_y - lp1_y));
+
+    // X, Y???
+    //line(*image, Point(point[1], point[0]), Point(onLine[1], onLine[0]), Scalar(0, 255, 0));
+
+    //return distanceBetweenPoints(point, onLine);
+
+    return dist;
 }
 
 // Calculates the distance between a point and a line segment.
 // (= the length of the segment that is perpendicular to the
 // line segment and ends at the supplied point)
-double distanceFromCartesianSegment(Vec2i point, pair<Vec2i, Vec2i> linePoints)
+double distanceFromCartesianSegment(Vec2f point, pair<Vec2f, Vec2f> linePoints)
 {
-    int x = point[1];
-    int y = point[0];
+    double x = point[1];
+    double y = point[0];
 
-    int lp1_x = linePoints.first[1];
-    int lp1_y = linePoints.first[0];
+    double lp1_x = linePoints.first[1];
+    double lp1_y = linePoints.first[0];
 
-    int lp2_x = linePoints.second[1];
-    int lp2_y = linePoints.second[0];
+    double lp2_x = linePoints.second[1];
+    double lp2_y = linePoints.second[0];
 
 
     // find segment length
@@ -436,13 +455,13 @@ double distanceFromCartesianSegment(Vec2i point, pair<Vec2i, Vec2i> linePoints)
     // Else, calculate the distance between (x, y) and the intersection
     // point on the line segment, which is the shortest distance.
     else
-        return distanceBetweenPoints(point, Vec2i(lp1_y + t * (lp2_y - lp1_y), lp1_x + t * (lp2_x - lp1_x)));
+        return distanceBetweenPoints(point, Vec2f(lp1_y + t * (lp2_y - lp1_y), lp1_x + t * (lp2_x - lp1_x)));
 }
 
 
 // Calculates the distance of a cartesian point to a polar line
 // (for instance, the distance to Hough lines).
-double distanceFromPolarLine (Vec2f point, Vec2f polarLine)
+double distanceFromPolarLine (Vec2f point, Vec2f polarLine, Mat* image)
 {
     // Convert polar line pair (rho, theta)
     // to cartesian coordinates (x, y) - the point
@@ -471,6 +490,7 @@ double distanceFromPolarLine (Vec2f point, Vec2f polarLine)
 
     double b = -(m * poX) + poY;
 
+
     // Find two points on the line.
     double lp1_x = poX;
     double lp1_y =  m * lp1_x + b;
@@ -481,14 +501,14 @@ double distanceFromPolarLine (Vec2f point, Vec2f polarLine)
     // Calculate distance from input point to line
     // ( = length of the orthogonal tangent of the line that
     // passes through the input point).
-    return distanceFromCartesianLine(point, make_pair(Vec2i(lp1_y, lp1_x), Vec2i(lp2_y, lp2_x)));
+    return distanceFromCartesianLine(point, make_pair(Vec2f(lp1_y, lp1_x), Vec2f(lp2_y, lp2_x)), image);
 }
 
 // Checks if a point is on a polar line or not.
 // Uses a tolerance to cope with floating point values.
-bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance)
+bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance, Mat* image)
 {
-    double dist = distanceFromPolarLine(point, polarLine);
+    double dist = distanceFromPolarLine(point, polarLine, image);
 
     if (dist <= tolerance)
         return true;
@@ -513,8 +533,11 @@ void clusterCells (int totalNumberCells, float rhoStep, int numRho, Vec2f primar
 
     // start and end (numberCells * rho step) above and below current cell
     // if possible, otherwise cap at bounds
-    int rhoclst_start = lRho - (numberCells * rhoStep) < 0 ? 0 : lRho - (numberCells * rhoStep);
-    int rhoclst_end = lRho + (numberCells * rhoStep) > numRho * rhoStep ? numRho * rhoStep : lRho + (numberCells * rhoStep);
+    //int rhoclst_start = lRho - (numberCells * rhoStep) < 0 ? 0 : lRho - (numberCells * rhoStep);
+    //int rhoclst_end = lRho + (numberCells * rhoStep) > numRho * rhoStep ? numRho * rhoStep : lRho + (numberCells * rhoStep);
+    int rhoclst_start = lRho - (numberCells * rhoStep);
+    int rhoclst_end = lRho + (numberCells * rhoStep);
+
 
     // For each accumulator cell (= each accepted line) above the current threshold:
     // Cluster the five rho cells (constant theta) above and below it together with the cell itself
@@ -525,7 +548,11 @@ void clusterCells (int totalNumberCells, float rhoStep, int numRho, Vec2f primar
     clusterLines->clear();
 
     for(double z = rhoclst_start; z <= rhoclst_end; z+=rhoStep)
+    {
         clusterLines->push_back(Vec2f(z, lTheta));
+        //cout << Vec2f(z, lTheta / 0.0174533 ) << "\n";
+    }
+    //cout << "\n";
 }
 
 // Finds the highest local difference in area size in

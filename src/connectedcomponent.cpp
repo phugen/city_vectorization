@@ -35,7 +35,7 @@ ConnectedComponent::~ConnectedComponent(){}
 bool ConnectedComponent::operator == (const ConnectedComponent other)
 {
     // define equality as having the same bounding box
-    // (which isn't really exact but suffices our needs)
+    // (which isn't really exact but suffices for our needs)
     if(mbr_min == other.mbr_min && mbr_max == other.mbr_max)
         return true;
     else

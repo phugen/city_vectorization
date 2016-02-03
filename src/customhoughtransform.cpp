@@ -5,7 +5,7 @@
   * Also provides a way to trace which input point contributed to which
   * cells in the accumulator to delete these contributions individually later.
   *
-  * Author: openCV (see license below) / Phugen
+  * Author: openCV (see license below) / phugen
   */
 
 /*M///////////////////////////////////////////////////////////////////////////////////////
@@ -148,7 +148,7 @@ void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
             if( image[i * step + j] != 0 )
             {
                 Vec2i inputPoint = Vec2i(i, j);// centroid coordinates
-                vector<int> cList = vector<int>(0, 0); // associated accumulator positions
+                vector<int> cList; // associated accumulator positions
 
                 for(int n = 0; n < numangle; n++ )
                 {
@@ -266,6 +266,12 @@ void deleteLineContributions (int* accumulator, Vec2i inputPoint, map<Vec2i, vec
         // delete all contributions in the list from accumulator
         for(auto pos = (*iter).second.begin(); pos != (*iter).second.end(); pos++)
             accumulator[*pos]--;
+
+        // delete entry for the input point from the map
+        // so repeated searches for the same input point
+        // don't decrease the accumulator values erroneously
+        vector<int> empty;
+        (*iter).second = empty;
     }
 }
 

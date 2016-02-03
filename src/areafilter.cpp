@@ -12,6 +12,8 @@
 using namespace std;
 using namespace cv;
 
+
+
 // Dismiss any components that have an area ratio
 // less than 1:ratio or larger than ratio:1 because they
 // are likely to not be characters.

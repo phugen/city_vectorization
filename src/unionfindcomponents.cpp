@@ -21,10 +21,12 @@ using namespace cv;
 
 
 // Expects binary picture (e.g. black layer)
-void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
+// If a component has less than minPx pixels, it is removed from the image
+// to stop unnecessary components from being evaluated.
+void unionFindComponents(Mat* input, vector<ConnectedComponent>* components, int minPx)
 {
-    const int rows = input.rows; // shortcuts
-    const int cols = input.cols;
+    const int rows = input->rows; // shortcuts
+    const int cols = input->cols;
 
     int label = 1; // number of first component
     vector<int> labels = vector<int>(rows * cols, 0); // keeps track of which pixel belongs to which component, 0 = "background"
@@ -71,7 +73,7 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
     // equivalent and will be "translated" in the second pass.
     for (int i = 0; i < rows; i++)
         for(int j = 0; j < cols; j++)
-            if(input.at<uchar>(i, j) == 0) // check only black pixels
+            if(input->at<uchar>(i, j) == 0) // check only black pixels
             {
                 // reset neighbor list
                 neighborPositions.clear();
@@ -92,23 +94,23 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                 // top right pixel
                 else if(i == 0 && j == (cols - 1))
                 {
-                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input->at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
                 }
 
 
                 // bottom left pixel
                 else if (i == (rows - 1) && j == 0)
                 {
-                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
-                    if(input.at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
+                    if(input->at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input->at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
                 }
 
                 // bottom right pixel
                 else if (i == (rows - 1) && j == (cols - 1))
                 {
-                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
-                    if(input.at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
-                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input->at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input->at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
+                    if(input->at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
                 }
 
                 // if we were in a corner, the appropriate
@@ -118,41 +120,41 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
                 // upper border
                 else if (i == 0)
                 {
-                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input->at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
                 }
 
                 // left border
                 else if (j == 0)
                 {
-                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
-                    if(input.at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
+                    if(input->at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input->at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
                 }
 
                 // right border
                 else if (j == (cols - 1))
                 {
-                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
-                    if(input.at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
-                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input->at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input->at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
+                    if(input->at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
                 }
 
                 // lower border
                 else if (i == (rows - 1))
                 {
-                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
-                    if(input.at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
-                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
-                    if(input.at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
+                    if(input->at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input->at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
+                    if(input->at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input->at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
                 }
 
                 // Normal case - pixel is somewhere
                 // in the image, but not near any border.
                 else
                 {
-                    if(input.at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
-                    if(input.at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
-                    if(input.at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
-                    if(input.at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
+                    if(input->at<uchar>(i, j-1) == 0) neighborPositions.push_back(Vec2i(i, j-1));
+                    if(input->at<uchar>(i-1, j-1) == 0) neighborPositions.push_back(Vec2i(i-1, j-1));
+                    if(input->at<uchar>(i-1, j) == 0) neighborPositions.push_back(Vec2i(i-1, j));
+                    if(input->at<uchar>(i-1, j+1) == 0) neighborPositions.push_back(Vec2i(i-1, j+1));
                 }
 
                 // if there were no black neighbors
@@ -254,11 +256,11 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
 
 
     int numTrueComponents = trueLabels.size();
-    cout << "Number of components found: " << numTrueComponents << "\n\n";
+    cout << "Number of components found: " << numTrueComponents << "\n";
 
 
     Mat showMBR;
-    cvtColor(input, showMBR, CV_GRAY2RGB);
+    cvtColor(*input, showMBR, CV_GRAY2RGB);
 
     // color found components
     for (int i = 0; i < rows; i++)
@@ -283,6 +285,19 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
         if(!isValidCoord(MBRCoords[*iter]))
             continue;
 
+        // Skip components which include too few
+        // black pixels. The lower limit should be one for which
+        // it is hard to imagine that any letter that is of reasonable size
+        // could be drawn with less pixels than the limit.
+        //
+        // Idea: Find minPx dynamically by constructing a pixel
+        // distribution histogram and cutting off low outliers.
+        if(pxPerLabel[*iter] < minPx)
+        {
+            eraseConnectedPixels(seedPerLabel[*iter], input);
+            continue;
+        }
+
         // create connected component
         // and store it in vector
         components->push_back(*(new ConnectedComponent((MBRCoords[*iter])[0], (MBRCoords[*iter])[1], pxPerLabel[*iter], seedPerLabel[*iter])));
@@ -294,6 +309,8 @@ void unionFindComponents(Mat input, vector<ConnectedComponent>* components)
         // draw MBR for this component
         rectangle(showMBR, min, max, Scalar(0, 0, 255), 1, 8, 0);
     }
+
+    cout << "Number of components after pixel filter with min size " << minPx << ": " << components->size() << "\n\n";
 
     // debug? set areas for components
     for(auto iter = components->begin(); iter != components->end(); iter++)
