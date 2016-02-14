@@ -37,6 +37,10 @@ bool compareByLineDistance (ConnectedComponent a, ConnectedComponent b)
 // via Hough transformation on the MBR centroids of all components.
 void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 {
+    // No components passed the filters - no work left to do.
+    if(comps->size() == 0)
+        return;
+
     int rows = input.rows;
     int cols = input.cols;
     double avgheight = 0;
@@ -78,6 +82,8 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     avgheight /= comps->size();
 
     float guess_factor = 0.2 * avgheight; // Initial guess for the rho resolution
+    guess_factor > 0 ? guess_factor = guess_factor : guess_factor = 1;
+
     float rho = guess_factor; // set rho step (the polar line distance value resolution) to initial guess
     float theta = 0.0174533; // set theta (vector angle) resolution in radians
     int threshold = 20; // values in Hough accumulator have to exceed this value to be accepted
@@ -238,7 +244,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
                 // STILL BUGGY.
                 for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
-                    //deleteLineContributions(accumulator, (*comp).centroid, contributions);
+                    deleteLineContributions(accumulator, (*comp).centroid, contributions);
 
                 // sort components in this cluster by their distance to the original hough line
                 sort(cluster.begin(), cluster.end(), compareByLineDistance);
@@ -274,7 +280,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                         // highest (longest) to lowest (shortest).
                         if(current.size() >= threshold && current.size() > 2)
                         {
-                            cout << current.size() << " >= " << threshold << "\n";
+                            //cout << current.size() << " >= " << threshold << "\n";
 
                             for(auto coch = current.chars.begin(); coch != current.chars.end(); coch++)
                             {
