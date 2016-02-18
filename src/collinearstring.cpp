@@ -45,7 +45,7 @@ double CollinearString::localAvgHeight (vector<ConnectedComponent> cluster, int 
     int dim;
 
     // determine which MBR dimension to use by inspecting line angle
-    double angle = cluster.at(listPos).houghLine[1];
+    double angle = cluster.at(listPos).houghLine[0];
 
     if(angle <= 0.785398) //|| angle >= 2.53073)
         dim = 1; // line is somewhat vertical (0° - 45°), use X axis for height due to string orientation

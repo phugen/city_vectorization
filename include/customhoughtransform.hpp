@@ -22,13 +22,13 @@ struct LinePolar
 
 
 void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
-                       double min_theta, double max_theta, int* accumulator,
+                       double min_theta, double max_theta, int* accum,
                        std::map<cv::Vec2i, std::vector<int>, Vec2iCompare>* contributions);
 
 void HoughLinesExtract (int* accum, int numrho, int numangle, float rho, float theta, float min_theta,
-                        int threshold, std::vector<cv::Vec2f>* lines, int mode = THRESH_GT);
+                        int threshold, std::vector<cv::Vec3f> *lines, int mode = THRESH_GT);
 
-void deleteLineContributions (int* accumulator, cv::Vec2i inputPoint, std::map<cv::Vec2i, std::vector<int>, Vec2iCompare> contributions);
+void deleteLineContributions (int* accum, cv::Vec2i inputPoint, std::map<cv::Vec2i, std::vector<int>, Vec2iCompare> contributions);
 
 #endif // CUSTOMHOUGHTRANSFORM_HPP
 

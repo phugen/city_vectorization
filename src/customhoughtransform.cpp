@@ -81,7 +81,7 @@ array of (rho, theta) pairs. linesMax is the buffer size (number of pairs).
 Functions return the actual number of found lines.
 */
 void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
-                       double min_theta, double max_theta, int* accumulator,
+                       double min_theta, double max_theta, int* accum,
                        map<Vec2i, vector<int>, Vec2iCompare>* contributions)
 {
     int i, j;
@@ -126,13 +126,9 @@ void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
     }
 #endif
 
-    AutoBuffer<int> _accum((numangle+2) * (numrho+2));
     AutoBuffer<float> _tabSin(numangle);
     AutoBuffer<float> _tabCos(numangle);
-    int *accum = _accum;
     float *tabSin = _tabSin, *tabCos = _tabCos;
-
-    memset( accum, 0, sizeof(accum[0]) * (numangle+2) * (numrho+2) );
 
     float ang = static_cast<float>(min_theta);
     for(int n = 0; n < numangle; ang += theta, n++ )
@@ -154,8 +150,7 @@ void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
                 {
                     int r = cvRound( j * tabCos[n] + i * tabSin[n] );
                     r += (numrho - 1) / 2;
-                    accum[(n+1) * (numrho+2) + r+1]++;
-                    accumulator[(n+1) * (numrho+2) + r+1]++; // add to exposed accum; zero matrix or other sane init value expected.
+                    accum[(n+1) * (numrho+2) + r+1]++; // add to exposed accum; zero matrix or other sane init value expected.
                     cList.push_back((n+1) * (numrho+2) + r+1); // save accumulator position of contributed value
                 }
 
@@ -163,36 +158,6 @@ void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
                 contributions->emplace(inputPoint, cList);
             }
         }
-
-    // stage 2. find local maximums
-    /*for(int r = 0; r < numrho; r++ )
-        for(int n = 0; n < numangle; n++ )
-        {
-            int base = (n+1) * (numrho+2) + r+1;
-            if( accum[base] > threshold &&
-                    accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
-                    accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2] )
-                _sort_buf.push_back(base);
-        }
-
-    // stage 3. sort the detected lines by accumulator value
-    std::sort(_sort_buf.begin(), _sort_buf.end(), hough_cmp_gt(accum));
-
-    // stage 4. store the first min(total,linesMax) lines to the output buffer
-    linesMax = std::min(linesMax, (int)_sort_buf.size());
-    double scale = 1./(numrho+2);
-    for( i = 0; i < linesMax; i++ )
-    {
-        LinePolar line;
-        int idx = _sort_buf[i];
-        int n = cvFloor(idx*scale) - 1;
-        int r = idx - (n+1)*(numrho+2) - 1;
-        line.rho = (r - (numrho - 1)*0.5f) * rho;
-        line.angle = static_cast<float>(min_theta) + n * theta;
-        lines.push_back(Vec2f(line.rho, line.angle));
-    }*/
-
-
 }
 
 // Extracts polar Hough lines from a Hough accumulator.
@@ -207,7 +172,7 @@ void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
 // pairs that the line at the same vector position in "lines" contri-
 // buted to the accumulator, so they can be deleted individually.
 void HoughLinesExtract (int* accum, int numrho, int numangle, float rho, float theta, float min_theta,
-                        int threshold, vector<Vec2f>* lines, int mode)
+                        int threshold, vector<Vec3f>* lines, int mode)
 {
     vector<int> _sort_buf;
 
@@ -250,8 +215,8 @@ void HoughLinesExtract (int* accum, int numrho, int numangle, float rho, float t
         line.rho = (r - (numrho - 1)*0.5f) * rho;
         line.angle = static_cast<float>(min_theta) + n * theta;
 
-        // store lines
-        lines->push_back(Vec2f(line.rho, line.angle));
+        // store lines in format [angle, rho, accum address]
+        lines->push_back(Vec3f(line.angle, line.rho, idx));
     }
 }
 

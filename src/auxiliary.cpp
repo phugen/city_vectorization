@@ -279,8 +279,7 @@ bool isValidCoord (Vec2i* check)
 }
 
 
-// Calculates the area the MBR of a connected component
-// occupies.
+// Calculates the area the MBR of a connected component occupies.
 double getMBRArea(ConnectedComponent comp)
 {
     // calculate component MBR area size
@@ -314,18 +313,18 @@ double getMBRArea(ConnectedComponent comp)
 }
 
 // draw a line given in polar coordinates on the input image using the given color.
-void drawLines (std::vector<Vec2f> lines, cv::Mat* image, Scalar color)
+void drawLines (std::vector<Vec3f> lines, cv::Mat* image, Scalar color)
 {
     for(size_t i = 0; i < lines.size(); i++)
     {
-        // Convert polar line pair (rho, theta)
+        // Convert polar line pair (theta, rho)
         // to cartesian coordinates (x, y) - the point
         // where the perpendicular line intersects
         // the origin line
-        float poX = lines[i][0] * cos(lines[i][1]);
-        float poY = lines[i][0] * sin(lines[i][1]);
+        float poX = lines[i][1] * cos(lines[i][0]);
+        float poY = lines[i][1] * sin(lines[i][0]);
 
-        // Find cartesian equation equal to (rho, theta)
+        // Find cartesian equation equal to (theta, rho)
         // Find the slope of the line through the origin (0,0) and the
         // converted intersection point (rho, theta).
         // This line is perpendicular, so its slope is the inverse of
@@ -392,20 +391,12 @@ double distanceFromCartesianLine(Vec2f point, pair<Vec2f, Vec2f> linePoints, Mat
     if (segLength == 0.)
         return distanceBetweenPoints(point, linePoints.first);
 
-    double k = abs((lp2_y - lp1_y) * (x - lp1_x) - (lp2_x - lp1_x) * (y - lp1_y)) / (pow((lp2_y - lp1_y), 2) + pow((lp2_x - lp1_x), 2));
+    //double k = abs((lp2_y - lp1_y) * (x - lp1_x) - (lp2_x - lp1_x) * (y - lp1_y)) / (pow((lp2_y - lp1_y), 2) + pow((lp2_x - lp1_x), 2));
     double dist = abs((lp2_x - lp1_x) * (lp1_y - y) - (lp1_x - x) * (lp2_y - lp1_y)) / sqrt(pow((lp2_x - lp1_x), 2) + pow((lp2_y - lp1_y), 2));
 
-    /*double sqLen = segLength * segLength;
-    double t = abs(((x - lp1_x) * (lp2_x - lp1_x) + (y - lp1_y) * (lp2_y - lp1_y))) / sqLen;*/
-
     // perpendicular line intersection point on the original line
-    // error here !
-    Vec2f onLine = Vec2f(y + k * (lp2_x - lp1_x), x - k * (lp2_y - lp1_y));
-
-    // X, Y???
-    //line(*image, Point(point[1], point[0]), Point(onLine[1], onLine[0]), Scalar(0, 255, 0));
-
-    //return distanceBetweenPoints(point, onLine);
+    // error here (still?)
+    //Vec2f onLine = Vec2f(y + k * (lp2_x - lp1_x), x - k * (lp2_y - lp1_y));
 
     return dist;
 }
@@ -461,16 +452,16 @@ double distanceFromCartesianSegment(Vec2f point, pair<Vec2f, Vec2f> linePoints)
 
 // Calculates the distance of a cartesian point to a polar line
 // (for instance, the distance to Hough lines).
-double distanceFromPolarLine (Vec2f point, Vec2f polarLine, Mat* image)
+double distanceFromPolarLine (Vec2f point, Vec3f polarLine, Mat* image)
 {
-    // Convert polar line pair (rho, theta)
+    // Convert polar line pair (theta, rho)
     // to cartesian coordinates (x, y) - the point
     // where the perpendicular line intersects
     // the origin line
-    double poX = (double) polarLine[0] * cos(polarLine[1]);
-    double poY = (double) polarLine[0] * sin(polarLine[1]);
+    double poX = (double) polarLine[1] * cos(polarLine[0]);
+    double poY = (double) polarLine[1] * sin(polarLine[0]);
 
-    // Find cartesian equation equal to (rho, theta)
+    // Find cartesian equation equal to (theta, rho)
     //
     // TODO: Distance calculation should also be possible without
     // this transformation, but no idea how
@@ -506,7 +497,7 @@ double distanceFromPolarLine (Vec2f point, Vec2f polarLine, Mat* image)
 
 // Checks if a point is on a polar line or not.
 // Uses a tolerance to cope with floating point values.
-bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance, Mat* image)
+bool pointOnPolarLine (Vec2f point, Vec3f polarLine, double tolerance, Mat* image)
 {
     double dist = distanceFromPolarLine(point, polarLine, image);
 
@@ -517,42 +508,52 @@ bool pointOnPolarLine (Vec2f point, Vec2f polarLine, double tolerance, Mat* imag
 }
 
 
-// Create numberRho new lines centered around the current Hough rho cell,
-// while keeping the angle theta constant.
+// Create a cluster around the primary cell with constant delta
+// and varying rho.
 // rhoStep denotes the rho resolution of the Hough domain, while
 // numRho is the total number of rho values in the matrix.
-void clusterCells (int totalNumberCells, float rhoStep, int numRho, Vec2f primaryCell, vector<Vec2f>* clusterLines)
+void clusterCells (int totalNumberCells, float rhoStep, int numRho, int numAngle, Vec3f primaryCell, std::vector<Vec3f> *cellPos)
 {
     if(totalNumberCells == 0)
         return;
 
-    // generate half the lines below and the other half above the primary cell
+    // cluster half the cells below and the other half above the primary cell
     int numberCells = totalNumberCells / 2; // Problem due to rounding uneven values?
-    float lRho = primaryCell[0];
-    float lTheta = primaryCell[1];
+    float theta = primaryCell[0];
+    float rho = primaryCell[1];
+    int base_addr = primaryCell[2];
+
 
     // start and end (numberCells * rho step) above and below current cell
     // if possible, otherwise cap at bounds
     //int rhoclst_start = lRho - (numberCells * rhoStep) < 0 ? 0 : lRho - (numberCells * rhoStep);
     //int rhoclst_end = lRho + (numberCells * rhoStep) > numRho * rhoStep ? numRho * rhoStep : lRho + (numberCells * rhoStep);
-    int rhoclst_start = lRho - (numberCells * rhoStep);
-    int rhoclst_end = lRho + (numberCells * rhoStep);
+    int rhoclst = rho - (numberCells * rhoStep);
+    //int rhoclst_end = lRho + (numberCells * rhoStep);
 
+    // find start and end cell of the cluster
+    int addr_start;
+    base_addr - numberCells * numRho < 0 ? addr_start = 0 : addr_start = base_addr - numberCells * numRho;
 
-    // For each accumulator cell (= each accepted line) above the current threshold:
-    // Cluster the five rho cells (constant theta) above and below it together with the cell itself
-    // This results in a set of a maximum of 11 parallel lines in the cartesian domain, on which component centroids
+    int addr_end;
+    int lastpos = ((numRho + 2) * (numAngle + 2)) - 1;
+    base_addr + numberCells * numRho > lastpos ? addr_end = lastpos : addr_end = base_addr + numberCells * numRho;
+
+    // Cluster totalNumberCells cells (constant theta) above and below the primary cell together with the cell itself
+    // This results in a set of parallel lines in the cartesian domain, on which component centroids
     // may or may not lie.
     // This is done to catch outliers, i.e. capital letter components whose centroids might not be
     // in line with the small letters in the same word by improving the guess for the rho resolution.
-    clusterLines->clear();
+    cellPos->clear();
 
-    for(double z = rhoclst_start; z <= rhoclst_end; z+=rhoStep)
+    // save line in format (theta, rho, accumulator position)
+    for(double z = addr_start; z <= addr_end; z += numRho)
     {
-        clusterLines->push_back(Vec2f(z, lTheta));
-        //cout << Vec2f(z, lTheta / 0.0174533 ) << "\n";
+        cellPos->push_back(Vec3f(theta, rhoclst, z));
+        rhoclst += rhoStep;
+
+        //cells->push_back(Vec2f(z, lTheta));
     }
-    //cout << "\n";
 }
 
 // Finds the highest local difference in area size in
