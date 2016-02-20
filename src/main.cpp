@@ -18,8 +18,8 @@ int main (int argc, char** argv)
     Mat original, *output;
     vector<ConnectedComponent> components;
 
-    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer_2.png", CV_LOAD_IMAGE_COLOR);
-    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/peter.png", CV_LOAD_IMAGE_COLOR);
+    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer.png", CV_LOAD_IMAGE_COLOR);
+    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/houghtest.png", CV_LOAD_IMAGE_COLOR);
     //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_mittel_edit.png", CV_LOAD_IMAGE_COLOR);
 
 
@@ -42,7 +42,7 @@ int main (int argc, char** argv)
     Vec3b thresholds = Vec3b(180, 180, 180);
 
     getBlackLayer(thresholds, original, output);
-    unionFindComponents(output, &components, 10); // size: 10
+    unionFindComponents(output, &components, 0); // size: 10
     areaFilter(&components, 10);
     collinearGrouping(*output, &components);
 

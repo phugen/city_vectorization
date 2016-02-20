@@ -1,13 +1,11 @@
-#ifndef AREAFILTER_HPP
-#define AREAFILTER_HPP
+#pragma once
 
 #include <vector>
 
 #include "opencvincludes.hpp"
 #include "connectedcomponent.hpp"
 
-void areaFilter(std::vector<ConnectedComponent>* components, int ratio);
-void clusterCompAreaFilter(std::vector<ConnectedComponent>* cluster, int ratio);
 
-#endif // AREAFILTER_HPP
+void areaFilter(std::vector<ConnectedComponent>* components, int ratio);
+void clusterCompAreaFilter(std::vector<ConnectedComponent>* cluster, double maxError);
 

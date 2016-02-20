@@ -1,9 +1,13 @@
 QT += core
 QT -= gui
 
+QMAKE_CXXFLAGS_DEBUG += -pg
+QMAKE_LFLAGS_DEBUG += -pg
+
 TARGET = cityplan_vectorization
 CONFIG += console
 CONFIG -= app_bundle
+CONFIG += c++11
 
 TEMPLATE = app
 
@@ -20,7 +24,8 @@ SOURCES += \
     src/zhangsuen.cpp \
     src/collinearstring.cpp \
     src/collineargroup.cpp \
-    src/collinearphrase.cpp
+    src/collinearphrase.cpp \
+    src/statistics.cpp
 
 HEADERS += \
     include/areafilter.hpp \
@@ -36,7 +41,8 @@ HEADERS += \
     include/vec2icompare.hpp \
     include/collinearstring.hpp \
     include/collineargroup.hpp \
-    include/collinearphrase.hpp
+    include/collinearphrase.hpp \
+    include/statistics.hpp
 
 INCLUDEPATH += "C:/opencv/build/include"
 
@@ -46,4 +52,5 @@ LIBS += -LC:/opencv/build/x86/mingw/bin \
             -lopencv_core300 \
             -lopencv_imgcodecs300 \
 
-CONFIG += c++11
+
+

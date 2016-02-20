@@ -1,5 +1,4 @@
-#ifndef UNIONFIND_HPP
-#define UNIONFIND_HPP
+#pragma once
 
 class UnionFind
 {
@@ -22,6 +21,3 @@ class UnionFind
         // Return the number of disjoint sets.
         int count();
 };
-
-#endif // UNIONFIND_HPP
-

@@ -1,5 +1,4 @@
-#ifndef UNIONFINDCOMPONENTS_HPP
-#define UNIONFINDCOMPONENTS_HPP
+#pragma once
 
 #include <vector>
 
@@ -7,6 +6,3 @@
 #include "include/connectedcomponent.hpp"
 
 void unionFindComponents(cv::Mat* input, std::vector<ConnectedComponent>* components, int minPx);
-
-#endif // UNIONFINDCOMPONENTS_HPP
-

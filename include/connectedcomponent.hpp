@@ -1,5 +1,4 @@
-#ifndef CONNECTEDCOMPONENT_HPP
-#define CONNECTEDCOMPONENT_HPP
+#pragma once
 
 #include "opencvincludes.hpp"
 
@@ -33,5 +32,3 @@ public:
     int area; // total area occupied by this component's MBR
     int numBlackPixels; // number of black pixels in this component
 };
-
-#endif // CONNECTEDCOMPONENT_HPP

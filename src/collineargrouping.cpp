@@ -11,6 +11,7 @@
 #include "include/collineargrouping.hpp"
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <map>
 
 #include "include/auxiliary.hpp"
@@ -18,35 +19,65 @@
 #include "include/customhoughtransform.hpp"
 #include "include/areafilter.hpp"
 #include "include/collinearstring.hpp"
+#include "include/statistics.hpp"
 
 using namespace std;
 using namespace cv;
 
-#define DEBUG
+
+//#define DEBUG_LINE
+//#define DEBUG_MBR
+//#define DEBUG_DELETION
 
 
-void printAccumValues (int* accumulator, int numAngle, int numRho)
+// Compare two components referencing the hough
+// line they were grouped with.
+struct compareByLineDistance
 {
-    for(int i = 0; i < numAngle; i++)
+    Vec3f polarLine;
+
+    compareByLineDistance(Vec3f line)
     {
-        for(int j = 0; j < numRho; j++)
-        {
-            cout << accumulator[i * numRho + j];
-        }
-
-        cout << "\n";
+        this->polarLine = line;
     }
-    cout << "\n\n";
-}
 
+    bool operator () (ConnectedComponent a, ConnectedComponent b)
+    {
+        // calculate perpendicular line that
+        // intersects a and b respectively
+        // and the intersection points a_i and b_i
+        double poX = (double) polarLine[1] * cos(polarLine[0]);
+        double poY = (double) polarLine[1] * sin(polarLine[0]);
 
-// Compare two components that lie on the same Hough line
-// by their distance along the line, i.e. their centroid's
-// X coordinate.
-bool compareByLineDistance (ConnectedComponent a, ConnectedComponent b)
-{
-    return (a.centroid[1]) < (b.centroid[1]);
-}
+        double m = -1. / (slope(0, 0, poX, poY));
+        double y_isec = -(m * poX) + poY;
+
+        // Find two points on the line.
+        double lp1_x = poX;
+        double lp1_y =  m * lp1_x + y_isec;
+
+        double lp2_x = poX + 1;
+        double lp2_y = m * lp2_x + y_isec;
+
+        // Calculate intersection points for a and b:
+        double a_x = a.centroid[1];
+        double a_y = a.centroid[0];
+
+        double b_x = b.centroid[1];
+        double b_y = b.centroid[0];
+
+        double k_a = ((lp2_y - lp1_y) * (a_x - lp1_x) - (lp2_x - lp1_x) * (a_y - lp1_y)) / (pow((lp2_y - lp1_y), 2) + pow((lp2_x - lp1_x), 2));
+        Vec2f a_i = Vec2f(a_y + k_a * (lp2_x - lp1_x), a_x - k_a * (lp2_y - lp1_y));
+
+        double k_b = ((lp2_y - lp1_y) * (b_x - lp1_x) - (lp2_x - lp1_x) * (b_y - lp1_y)) / (pow((lp2_y - lp1_y), 2) + pow((lp2_x - lp1_x), 2));
+        Vec2f b_i = Vec2f(b_y + k_b * (lp2_x - lp1_x), b_x - k_b * (lp2_y - lp1_y));
+
+        // Order components by x coordinates of their
+        // intersection points
+        return (a_i[1]) < (b_i[1]);
+    }
+};
+
 
 // Performs collinear grouping and deletion of potential characters
 // via Hough transformation on the MBR centroids of all components.
@@ -78,7 +109,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
         avgheight += curr.mbr_max[0] - curr.mbr_min[0]; // cumulative height of all components
     }
 
-    namedWindow("CENTROIDS", WINDOW_AUTOSIZE);
+    namedWindow("CENTROIDS", CV_WINDOW_NORMAL);
     imshow("CENTROIDS", hough_UC);
 
     // output matrix for showing found lines
@@ -124,12 +155,11 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     HoughLinesCustom(hough_UC, rho, theta, 3.05433, 3.14159, accumulator, &contributions);
     HoughLinesExtract(accumulator, numRho, numAngle, rho, theta, 3.05433, threshold, &lines, THRESH_GT);
 
+
     cout << "LINESNOW: " << lines.size() << " with THRESHOLD: " << threshold << "\n";
 
-
-    // show hough lines
-    //drawLines(lines, &showHough, Scalar(0, 255, 0));
-    //drawLines(lines, &hough_8U, Scalar(255, 0, 0));
+    // debug window
+    namedWindow("WITHOUT TEXT", CV_WINDOW_NORMAL);
 
     vector<Vec3f> clustered_cells; // accumulator cell positions of cells in the cluster
     vector<ConnectedComponent> cluster; // components that lie on clusterLines
@@ -147,11 +177,11 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
             for (auto houghLine = lines.begin(); houghLine != lines.end(); houghLine++)
             {
                 // 5) Cluster 11 rho cells (including the primary cell) around the primary cell
-                clusterCells (10, rho, numRho, numAngle, *houghLine, &clustered_cells);
+                clusterCells (10, rho, numRho, *houghLine, &clustered_cells);
 
                 // debug: draw preliminary clustering lines in blue
                 // (original "hough line": red)
-                #ifdef DEBUG
+                #ifdef DEBUG_LINE
                     drawLines(clustered_cells, &clusterMat_V3, Scalar(255, 0, 0));
                 #endif
 
@@ -159,35 +189,19 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 // Simultaneously, calculate the average MBR height
                 // of all components in the cluster in order to refine
                 // the rho resolution guess.
-                for(auto clCellPos = clustered_cells.begin(); clCellPos != clustered_cells.end(); clCellPos++)
+                for(auto component = comps->begin(); component != comps->end(); component++)
                 {
-                    for(auto component = comps->begin(); component != comps->end(); component++)
+                    // If point lies between initial cluster lines, it's in the cluster
+                    if(pointBetweenPolarLines((*component).centroid, clustered_cells.at(0), clustered_cells.at(1)))
                     {
-                        /*if(pointOnPolarLine((*component).centroid, *clCell, 1, &clusterMat_V3))
-                        {
+                        // Add component to cluster if it wasn't in there already
+                        if(find(cluster.begin(), cluster.end(), *component) == cluster.end())
                             cluster.push_back(*component);
-                            avgheight += (*component).mbr_max[0] - (*component).mbr_min[0];
-                        }*/
+                        else
+                            break;
 
-                        // Look up component's accumulator positions
-                        // and check if any of them match the clustered cells.
-                        for(auto poslist = contributions.find((*component).centroid); poslist != contributions.end(); poslist++)
-                        {
-                            for(auto pos = (*poslist).second.begin(); pos != (*poslist).second.end(); pos++)
-                            {
-                                if((*pos) == (*clCellPos)[2])
-                                {
-                                    // Add component to cluster if it wasn't in there already
-                                    if(find(cluster.begin(), cluster.end(), *component) == cluster.end())
-                                        cluster.push_back(*component);
-                                    else
-                                        break;
-
-                                    // calculate average height of the cluster iteratively
-                                    avgheight += (*component).mbr_max[0] - (*component).mbr_min[0];
-                                }
-                            }
-                        }
+                        // calculate average height of the cluster iteratively
+                        avgheight += (*component).mbr_max[0] - (*component).mbr_min[0];
                     }
                 }
 
@@ -199,62 +213,44 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
 
                 // 8) Reset cluster and re-cluster using the new factor
                 cluster.clear();
-                clusterCells(factor, rho, numRho, numAngle, *houghLine, &clustered_cells);
+                clusterCells(factor, rho, numRho, *houghLine, &clustered_cells);
 
                 // Find all components whose accumulator cells belong to the cluster.
-                for(auto clCellPos = clustered_cells.begin(); clCellPos != clustered_cells.end(); clCellPos++)
+                for(auto component = comps->begin(); component != comps->end(); component++)
                 {
-                    for(auto component = comps->begin(); component != comps->end(); component++)
+                    if(pointBetweenPolarLines((*component).centroid, clustered_cells.at(0), clustered_cells.at(1)))
                     {
-                        /*if(pointOnPolarLine((*component).centroid, *clLine, 1, &clusterMat_V3))
-                        {
-                            // associate current Hough line with the component
-                            (*component).houghLine = *houghLine;
+                        // Add component to cluster if it wasn't in there already
+                        if(find(cluster.begin(), cluster.end(), *component) == cluster.end())
+                            cluster.push_back(*component);
+                        else
+                            break;
 
-                            // add this component to the refined cluster
-                            if(find(cluster.begin(), cluster.end(), *component) == cluster.end())
-                                cluster.push_back(*component);
-                        }*/
-
-                        for(auto poslist = contributions.find((*component).centroid); poslist != contributions.end(); poslist++)
-                        {
-                            for(auto pos = (*poslist).second.begin(); pos != (*poslist).second.end(); pos++)
-                            {
-                                if((*pos) == (*clCellPos)[2])
-                                {
-                                    // associate current Hough line with the component
-                                    (*component).houghLine = *houghLine;
-
-                                    // add this component to the refined cluster
-                                    // (and don't add it more than once)
-                                    if(find(cluster.begin(), cluster.end(), *component) == cluster.end())
-                                        cluster.push_back(*component);
-
-                                    break;
-                                }
-                            }
-                        }
+                        // calculate average height of the cluster iteratively
+                        avgheight += (*component).mbr_max[0] - (*component).mbr_min[0];
                     }
                 }
 
 
                 // debug: show cluster MBRs---------------------------------------------
-                for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
-                {
-                    ConnectedComponent c = *comp;
+                #ifdef DEBUG_MBR
+                    for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
+                    {
+                        ConnectedComponent c = *comp;
 
-                    // rectangle works with (col,row), so swap coordinates
-                    Point min = Vec2i(c.mbr_min[1], c.mbr_min[0]);
-                    Point max = Vec2i(c.mbr_max[1], c.mbr_max[0]);
+                        // rectangle works with (col,row), so swap coordinates
+                        Point min = Vec2i(c.mbr_min[1], c.mbr_min[0]);
+                        Point max = Vec2i(c.mbr_max[1], c.mbr_max[0]);
 
-                    // draw MBR for this component
-                    rectangle(clusterMat_V3, min, max, Scalar(255, 0, 0), 1, 8, 0);
-                }
+                        // draw MBR for this component
+                        rectangle(clusterMat_V3, min, max, Scalar(255, 0, 0), 1, 8, 0);
+                    }
+                #endif
 
 
                 // debug: draw reclustered clustering lines in green and
                 // original "hough line" in red
-                #ifdef DEBUG
+                #ifdef DEBUG_LINE
                     vector<Vec3f> oneline;
                     oneline.push_back(*houghLine);
                     drawLines(clustered_cells, &clusterMat_V3, Scalar(0, 255, 255));
@@ -272,31 +268,38 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                 // this threshold have been evaluated to avoid destructive line overlap.
                 if(cluster.size() != 0)
                 {
-                    // apply area ratio filter to eliminate large components from the cluster
+                    vector<double> areas;
+                    for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
+                    {
+                        areas.push_back((*comp).area);
+                    }
+
+                    // apply area filter to eliminate extreme components from the cluster
                     // whose centroids are coincidentally on a string's hough line
-                    clusterCompAreaFilter(&cluster, 5);
+                    clusterCompAreaFilter(&cluster, median(areas));
                 }
 
-                // debug: show cluster MBRs FILTERED ---------------------------------------------
-                for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
-                {
-                    ConnectedComponent c = *comp;
-                    Point min = Vec2i(c.mbr_min[1], c.mbr_min[0]);
-                    Point max = Vec2i(c.mbr_max[1], c.mbr_max[0]);
-                    rectangle(clusterMat_V3, min, max, Scalar(0, 255, 0), 1, 8, 0);
-                }
+                #ifdef DEBUG_MBR
+                    // debug: show cluster MBRs FILTERED ---------------------------------------------
+                    for(auto comp = cluster.begin(); comp != cluster.end(); comp++)
+                    {
+                        ConnectedComponent c = *comp;
+                        Point min = Vec2i(c.mbr_min[1], c.mbr_min[0]);
+                        Point max = Vec2i(c.mbr_max[1], c.mbr_max[0]);
+                        rectangle(clusterMat_V3, min, max, Scalar(0, 255, 0), 1, 8, 0);
+                    }
 
-                namedWindow("CURRENT CLUSTER", WINDOW_AUTOSIZE);
-                imshow("CURRENT CLUSTER", clusterMat_V3);
+                    namedWindow("CURRENT CLUSTER", CV_WINDOW_NORMAL);
+                    imshow("CURRENT CLUSTER", clusterMat_V3);
 
-                #ifdef DEBUG
+
                     // reset cluster mat
                     cvtColor(input, clusterMat_V3, CV_GRAY2RGB);
                 #endif
                 //------------------------------------------------------------------
 
                 // sort components in this cluster by their distance to the original hough line
-                sort(cluster.begin(), cluster.end(), compareByLineDistance);
+                sort(cluster.begin(), cluster.end(), compareByLineDistance(*houghLine));
 
                 // Calculate component meta information and store it
                 if(cluster.size() != 0)
@@ -318,7 +321,9 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
             // Extra care is taken in order to not delete shorter strings before longer strings,
             // as this can lead to characters not being deleted ("destructive line overlap").
             for(auto costr = collinearStrings.begin(); costr != collinearStrings.end(); costr++)
+            {
                 for(auto cophr = (*costr).phrases.begin(); cophr != (*costr).phrases.end(); cophr++)
+                {
                     for(auto cowrd = (*cophr).words.begin(); cowrd != (*cophr).words.end(); cowrd++)
                     {
                         CollinearGroup current = *cowrd;
@@ -327,7 +332,7 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                         // match or exceed the current threshold - since the threshold
                         // signalizes how long the string is an drops from
                         // highest (longest) to lowest (shortest).
-                        if(current.size() >= threshold && current.size() > 1)
+                        if(current.size() >= threshold && current.size() > 2)
                         {
                             //cout << current.size() << " >= " << threshold << "\n";
 
@@ -337,24 +342,23 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
                                 // component from the output image
                                 eraseComponentPixels(*coch, &erased);
 
-                                // debug
-                                //printAccumValues (accumulator, numAngle+2, numRho+2);
-
                                 // 10.) Delete those values from the accumulator which were contributed
                                 // to it by components which are still in the cluster by now and thus
                                 // are marked for deletion anyway
                                 deleteLineContributions(accumulator, (*coch).centroid, contributions);
-
-                                // debug
-                                //cout << "\n\nAFTER:\n";
-                                //printAccumValues(accumulator, numAngle+2, numRho+2);
-
-                                // debug: reset cluster mat------------------
-                                //cvtColor(erased, clusterMat_V3, CV_GRAY2RGB);
-                                // ------------------------------------------
                             }
                         }
                     }
+
+
+                }
+
+                #ifdef DEBUG_DELETION
+                    // show intermediate result
+                    imshow("WITHOUT TEXT", erased);
+                    waitKey(0);
+                #endif
+            }
 
 
             // decrement accumulator threshold
@@ -424,15 +428,14 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     }
 
     // show hough lines overlayed on image
-    //namedWindow("HOUGH+IMAGE", WINDOW_AUTOSIZE);
+    //namedWindow("HOUGH+IMAGE", CV_WINDOW_NORMAL);
     //imshow("HOUGH+IMAGE", showHough);
 
     // show hough lines on component centroids
-    namedWindow("CENTROIDS", WINDOW_AUTOSIZE);
+    namedWindow("CENTROIDS", CV_WINDOW_NORMAL);
     imshow("CENTROIDS", hough_UC);
 
     // show result
-    namedWindow("WITHOUT TEXT", WINDOW_AUTOSIZE);
     imshow("WITHOUT TEXT", erased);
 
     // show clustering

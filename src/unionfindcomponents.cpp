@@ -324,6 +324,6 @@ void unionFindComponents(Mat* input, vector<ConnectedComponent>* components, int
     delete uf;
 
     // show result
-    namedWindow("Components", WINDOW_AUTOSIZE);
+    namedWindow("Components", CV_WINDOW_NORMAL);
     imshow("Components", showMBR);
 }

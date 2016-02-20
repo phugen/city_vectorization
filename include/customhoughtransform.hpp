@@ -1,5 +1,4 @@
-#ifndef CUSTOMHOUGHTRANSFORM_HPP
-#define CUSTOMHOUGHTRANSFORM_HPP
+#pragma once
 
 #include "opencvincludes.hpp"
 
@@ -29,6 +28,4 @@ void HoughLinesExtract (int* accum, int numrho, int numangle, float rho, float t
                         int threshold, std::vector<cv::Vec3f> *lines, int mode = THRESH_GT);
 
 void deleteLineContributions (int* accum, cv::Vec2i inputPoint, std::map<cv::Vec2i, std::vector<int>, Vec2iCompare> contributions);
-
-#endif // CUSTOMHOUGHTRANSFORM_HPP
 

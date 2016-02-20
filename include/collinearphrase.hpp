@@ -1,5 +1,4 @@
-#ifndef COLLINEARPHRASE_HPP
-#define COLLINEARPHRASE_HPP
+#pragma once
 
 #include "include/collineargroup.hpp"
 
@@ -14,6 +13,3 @@ public:
 
     std::vector<CollinearGroup> words; // contains pointers to all words that are part of this phrase
 };
-
-#endif // COLLINEARPHRASE_HPP
-

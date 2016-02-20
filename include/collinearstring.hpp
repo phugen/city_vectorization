@@ -1,5 +1,4 @@
-#ifndef COLLINEARSTRING_HPP
-#define COLLINEARSTRING_HPP
+#pragma once
 
 #include <vector>
 #include "include/connectedcomponent.hpp"
@@ -30,6 +29,4 @@ public:
     void refine();
 
 };
-
-#endif // COLLINEARSTRING_HPP
 

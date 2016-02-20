@@ -1,5 +1,4 @@
-#ifndef VEC2ICOMPARE_HPP
-#define VEC2ICOMPARE_HPP
+#pragma once
 
 #include "include/opencvincludes.hpp"
 
@@ -13,6 +12,3 @@ struct Vec2iCompare
         return a[0] < b[0];
     }
 };
-
-#endif // VEC2ICOMPARE_HPP
-

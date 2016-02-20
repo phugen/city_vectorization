@@ -16,14 +16,9 @@ using namespace cv;
 CollinearString::CollinearString(vector<ConnectedComponent> cluster, double avgHeight)
 {
     this->comps = cluster;
-
-    // DEBUG: Init as 100 groups; find a way to make this dynamic
-    // that works with the classification process in refine()
     this->groups = vector<CollinearGroup>();
-    for(int i = 0; i < 100; i++)
-        this->groups.push_back(CollinearGroup());
-
     this->phrases = vector<CollinearPhrase>();
+
     this->groupNo = 0;
     this->phraseNo = 0;
 }
@@ -199,18 +194,22 @@ void CollinearString::refine ()
     int oldPhraseNumber = -1; // for checking if the phrase count advanced
     int phraseNumber = 0; // current phrase count
 
+    // Add initial word and phrase groups
+    this->groups.push_back(CollinearGroup());
+    this->phrases.push_back(CollinearPhrase());
+
     // 2.) Check inter-character distances until
     // a component doesn't satisfy the threshold.
     for(auto comp = this->comps.begin(); comp != this->comps.end() - 1; comp++)
     {
-        // add new group if needed
-        /*if(groupNumber != oldGroupNumber)
+        // add new group if last group was terminated (or first loop)
+        if(groupNumber != oldGroupNumber)
         {
             this->groups.push_back(CollinearGroup());
             oldGroupNumber = groupNumber;
-        }*/
+        }
 
-        // add new phrase if needed
+        // add new phrase if last phrase was terminated (or first loop)
         if(phraseNumber != oldPhraseNumber)
         {
             this->phrases.push_back(CollinearPhrase());
@@ -272,7 +271,12 @@ void CollinearString::refine ()
             // The current component is not part of the current phrase,
             // start a new one instead.
             else
+            {
+                prevGroup->type = 'p';
+                curPhrase->words.push_back(*prevGroup);
+
                 phraseNumber++;
+            }
         }
     }
 
@@ -291,7 +295,8 @@ void CollinearString::refine ()
     // 4.) Search for consecutive isolated groups in phrases. If there are
     // cases in which there are two or more consecutive isolated groups in
     // a phrase, either truncate or split the groups.
-    for(int p = 0; p < phraseNumber; p++)
+    for(int p = 0; p < (int) phrases.size(); p++)
+    {
         for(int g = 0; g < (int) this->phrases.at(p).words.size() - 1; g++)
         {
             CollinearPhrase* cp = &(this->phrases.at(p));
@@ -302,14 +307,17 @@ void CollinearString::refine ()
             {
                 for(int c = g; c < (int) cp->words.size(); c++)
                 {
-                    if(cp->words.at(c).type != 'i')
-                        break;
-
-                    cout << "ISOLATED COMPONENT AT POS " << c << "IN PHRASE " << p << "\n";
+                    // erase sequence of isolated components
+                    if(cp->words.at((int) c).type != 'i')
+                    {
+                        cp->words.erase(cp->words.begin() + g, cp->words.begin() + (c-1));
+                        cout << "Deleted isolated component sequence at [" << c << " - " << c-1 << "] IN PHRASE " << p << "\n";
+                    }
                 }
 
             }
         }
+    }
 
 
     this->groupNo = groupNumber + 1;

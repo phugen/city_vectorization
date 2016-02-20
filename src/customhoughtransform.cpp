@@ -150,7 +150,7 @@ void HoughLinesCustom( const cv::Mat& img, float rho, float theta,
                 {
                     int r = cvRound( j * tabCos[n] + i * tabSin[n] );
                     r += (numrho - 1) / 2;
-                    accum[(n+1) * (numrho+2) + r+1]++; // add to exposed accum; zero matrix or other sane init value expected.
+                    accum[(n+1) * (numrho+2) + r+1]++; // add to exposed accum; contents of accum are expected to be >= 0.
                     cList.push_back((n+1) * (numrho+2) + r+1); // save accumulator position of contributed value
                 }
 
@@ -178,6 +178,7 @@ void HoughLinesExtract (int* accum, int numrho, int numangle, float rho, float t
 
     // stage 2. find local maximums
     for(int r = 0; r < numrho; r++ )
+    {
         for(int n = 0; n < numangle; n++ )
         {
             int base = (n+1) * (numrho+2) + r+1;
@@ -200,6 +201,7 @@ void HoughLinesExtract (int* accum, int numrho, int numangle, float rho, float t
                     _sort_buf.push_back(base);
             }
         }
+    }
 
     // stage 3. sort the detected lines by accumulator value
     std::sort(_sort_buf.begin(), _sort_buf.end(), hough_cmp_gt(accum));

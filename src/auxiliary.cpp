@@ -266,9 +266,9 @@ void getBlackLayer(Vec3b thresholds, Mat input, Mat* output)
                 output->at<uchar>(i, j) = 255;
         }
 
-    namedWindow("black layer", WINDOW_AUTOSIZE);
+    namedWindow("black layer", CV_WINDOW_NORMAL);
     imshow("black layer", *output);
-    imwrite("BLACK.png", *output );
+    //imwrite("BLACK.png", *output );
 }
 
 
@@ -324,28 +324,14 @@ void drawLines (std::vector<Vec3f> lines, cv::Mat* image, Scalar color)
         float poX = lines[i][1] * cos(lines[i][0]);
         float poY = lines[i][1] * sin(lines[i][0]);
 
-        // Find cartesian equation equal to (theta, rho)
+        // Find cartesian equation equal to (theta, rho):
         // Find the slope of the line through the origin (0,0) and the
         // converted intersection point (rho, theta).
         // This line is perpendicular, so its slope is the inverse of
         // the origin line: m_new = (-1/m).
         // Check if xi or yi are 0, since if so the slope will be infinite (NaN)!
-        double m;
-
-        // vertical line
-        if (poX == 0)
-            m = INT_MAX;
-
-        // horizontal line
-        else if (poY == 0)
-            m = 0;
-
-        // normal slope
-        else
-            m = -1. / ((poY - 0) / (poX - 0));
-
+        double m = -1. / slope(0, 0, poX, poY);
         double b = -(m * poX) + poY;
-
 
         // Find two points on the line.
         double lp1_x = poX - image->cols;
@@ -375,7 +361,7 @@ double distanceBetweenPoints (Vec2f a, Vec2f b)
 }
 
 // Calculates the distance between a point and a line.
-double distanceFromCartesianLine(Vec2f point, pair<Vec2f, Vec2f> linePoints, Mat* image)
+double distanceFromCartesianLine(Vec2f point, pair<Vec2f, Vec2f> linePoints)
 {
     double x = point[1];
     double y = point[0];
@@ -449,10 +435,109 @@ double distanceFromCartesianSegment(Vec2f point, pair<Vec2f, Vec2f> linePoints)
         return distanceBetweenPoints(point, Vec2f(lp1_y + t * (lp2_y - lp1_y), lp1_x + t * (lp2_x - lp1_x)));
 }
 
+// The signum function. Returns the sign of the input.
+template <typename T> int sgn(T val)
+{
+    return (T(0) < val) - (val < T(0));
+}
+
+// Find out on which side of the line a point lies.
+// Returns the output of the sign of the determinant:
+//
+// -1 = left of line, 0 = on the line, 1 = right of line
+// (TODO: Check if left/right is correct)
+int pointDirectionFromPolarLine (Vec2f point, Vec3f polarLine)
+{
+    double poX = (double) polarLine[1] * cos(polarLine[0]);
+    double poY = (double) polarLine[1] * sin(polarLine[0]);
+
+    double m = -1. / (slope(0,0, poX, poY));
+    double b = -(m * poX) + poY;
+
+    // Find two points on the line.
+    double lp1_x = poX;
+    double lp1_y =  m * lp1_x + b;
+
+    double lp2_x = poX + 1;
+    double lp2_y = m * lp2_x + b;
+
+    // Point to be evaluated:
+    double x = point[1];
+    double y = point[0];
+
+    // Calculate side:
+    return sgn((lp2_x - lp1_x) * (y - lp1_y) - (lp2_y - lp1_y) * (x - lp1_x));
+
+}
+
+
+// Determines whether a point is enclosed by
+// two PARALLEL polar lines.
+//
+// Returns true if it is, false if the lines aren't parallel or
+// if the point is not between them.
+bool pointBetweenPolarLines (Vec2f point, Vec3f polar1, Vec3f polar2)
+{
+    // check line parallelity
+    /*if(!areParallelPolar(polar1, polar2))
+        return false;*/
+
+    int dir1 = pointDirectionFromPolarLine(point, polar1);
+    int dir2 = pointDirectionFromPolarLine(point, polar2);
+
+    // If the point lies on different sides
+    // of two parallel lines, it can only lie
+    // in between them! Otherwise, it is left or right
+    // of both, and hence not in between.
+    // The case in which a point is on either or both
+    // of the lines is counted as "between" the lines.
+    if((dir1 != dir2) || (dir1 == 0) || (dir2 == 0))
+        return true;
+    else
+        return false;
+}
+
+// Calculates the slope of the line that goes through
+// points (poX0, poY0) and (poX1, poY1)
+double slope (double poX0, double poY0, double poX1, double poY1)
+{
+    double m;
+
+    // vertical line
+    if (poX1 == 0)
+        m = INT_MAX;
+
+    // horizontal line
+    else if (poY1 == 0)
+        m = 0;
+
+    // normal slope
+    else
+        m = ((poY1 - poY0) / (poX1 - poX0));
+
+    return m;
+}
+
+// Returns true if the two lines are parallel,
+// false otherwise.
+bool areParallelPolar (Vec3f polar1, Vec3f polar2)
+{
+    double poX1 = (double) polar1[1] * cos(polar1[0]);
+    double poY1 = (double) polar1[1] * sin(polar1[0]);
+    double poX2 = (double) polar2[1] * cos(polar2[0]);
+    double poY2 = (double) polar2[1] * sin(polar2[0]);
+
+    double m1 = -1. / slope(0, 0, poX1, poY1);
+    double m2 = -1. / slope(0, 0, poX2, poY2);
+
+    // two lines are parallel if they have
+    // the same slope m:
+    return (m1 == m2);
+}
 
 // Calculates the distance of a cartesian point to a polar line
 // (for instance, the distance to Hough lines).
-double distanceFromPolarLine (Vec2f point, Vec3f polarLine, Mat* image)
+double distanceFromPolarLine (Vec2f point, Vec3f polarLine)
 {
     // Convert polar line pair (theta, rho)
     // to cartesian coordinates (x, y) - the point
@@ -465,22 +550,8 @@ double distanceFromPolarLine (Vec2f point, Vec3f polarLine, Mat* image)
     //
     // TODO: Distance calculation should also be possible without
     // this transformation, but no idea how
-    double m;
-
-    // vertical line
-    if (poX == 0)
-        m = INT_MAX;
-
-    // horizontal line
-    else if (poY == 0)
-        m = 0;
-
-    // normal slope
-    else
-        m = -1. / ((poY - 0) / (poX - 0));
-
+    double m = -1. / (slope(0, 0, poX, poY));
     double b = -(m * poX) + poY;
-
 
     // Find two points on the line.
     double lp1_x = poX;
@@ -492,14 +563,14 @@ double distanceFromPolarLine (Vec2f point, Vec3f polarLine, Mat* image)
     // Calculate distance from input point to line
     // ( = length of the orthogonal tangent of the line that
     // passes through the input point).
-    return distanceFromCartesianLine(point, make_pair(Vec2f(lp1_y, lp1_x), Vec2f(lp2_y, lp2_x)), image);
+    return distanceFromCartesianLine(point, make_pair(Vec2f(lp1_y, lp1_x), Vec2f(lp2_y, lp2_x)));
 }
 
 // Checks if a point is on a polar line or not.
 // Uses a tolerance to cope with floating point values.
-bool pointOnPolarLine (Vec2f point, Vec3f polarLine, double tolerance, Mat* image)
+bool pointOnPolarLine (Vec2f point, Vec3f polarLine, double tolerance)
 {
-    double dist = distanceFromPolarLine(point, polarLine, image);
+    double dist = distanceFromPolarLine(point, polarLine);
 
     if (dist <= tolerance)
         return true;
@@ -512,7 +583,7 @@ bool pointOnPolarLine (Vec2f point, Vec3f polarLine, double tolerance, Mat* imag
 // and varying rho.
 // rhoStep denotes the rho resolution of the Hough domain, while
 // numRho is the total number of rho values in the matrix.
-void clusterCells (int totalNumberCells, float rhoStep, int numRho, int numAngle, Vec3f primaryCell, std::vector<Vec3f> *cellPos)
+void clusterCells (int totalNumberCells, float rhoStep, int numRho, Vec3f primaryCell, std::vector<Vec3f> *lines)
 {
     if(totalNumberCells == 0)
         return;
@@ -524,36 +595,18 @@ void clusterCells (int totalNumberCells, float rhoStep, int numRho, int numAngle
     int base_addr = primaryCell[2];
 
 
-    // start and end (numberCells * rho step) above and below current cell
-    // if possible, otherwise cap at bounds
-    //int rhoclst_start = lRho - (numberCells * rhoStep) < 0 ? 0 : lRho - (numberCells * rhoStep);
-    //int rhoclst_end = lRho + (numberCells * rhoStep) > numRho * rhoStep ? numRho * rhoStep : lRho + (numberCells * rhoStep);
-    int rhoclst = rho - (numberCells * rhoStep);
-    //int rhoclst_end = lRho + (numberCells * rhoStep);
-
-    // find start and end cell of the cluster
-    int addr_start;
-    base_addr - numberCells * numRho < 0 ? addr_start = 0 : addr_start = base_addr - numberCells * numRho;
-
-    int addr_end;
-    int lastpos = ((numRho + 2) * (numAngle + 2)) - 1;
-    base_addr + numberCells * numRho > lastpos ? addr_end = lastpos : addr_end = base_addr + numberCells * numRho;
-
     // Cluster totalNumberCells cells (constant theta) above and below the primary cell together with the cell itself
-    // This results in a set of parallel lines in the cartesian domain, on which component centroids
+    // This results in a set of parallel lines in the cartesian domain, between or on which component centroids
     // may or may not lie.
-    // This is done to catch outliers, i.e. capital letter components whose centroids might not be
-    // in line with the small letters in the same word by improving the guess for the rho resolution.
-    cellPos->clear();
+    // This is done to catch small positional outliers, e.g. capital letter components whose centroids might not be
+    // in line with the small letters in the same word.
+    int rhoclst_start = rho - (numberCells * rhoStep) < 0 ? 0 : rho - (numberCells * rhoStep);
+    int rhoclst_end = rho + (numberCells * rhoStep) > numRho * rhoStep ? numRho * rhoStep : rho + (numberCells * rhoStep);
 
-    // save line in format (theta, rho, accumulator position)
-    for(double z = addr_start; z <= addr_end; z += numRho)
-    {
-        cellPos->push_back(Vec3f(theta, rhoclst, z));
-        rhoclst += rhoStep;
+    lines->clear();
 
-        //cells->push_back(Vec2f(z, lTheta));
-    }
+    lines->push_back(Vec3f(theta, rhoclst_start, -1));
+    lines->push_back(Vec3f(theta, rhoclst_end, -1));
 }
 
 // Finds the highest local difference in area size in
