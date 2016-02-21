@@ -81,7 +81,7 @@ struct compareByLineDistance
 
 // Performs collinear grouping and deletion of potential characters
 // via Hough transformation on the MBR centroids of all components.
-void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
+void collinearGrouping (Mat input, Mat* output, vector<ConnectedComponent>* comps)
 {
     // No components passed the filters - no work left to do.
     if(comps->size() == 0)
@@ -438,11 +438,13 @@ void collinearGrouping (Mat input, vector<ConnectedComponent>* comps)
     // show result
     imshow("WITHOUT TEXT", erased);
 
+    *output = erased;
+
     // show clustering
     //imshow("CLUSTER", clusters);
 
     // cleanup
     delete [] accumulator;
 
-    waitKey(0);
+    //waitKey(0);
 }

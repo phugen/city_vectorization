@@ -1,8 +1,8 @@
 QT += core
 QT -= gui
 
-QMAKE_CXXFLAGS_DEBUG += -pg
-QMAKE_LFLAGS_DEBUG += -pg
+#QMAKE_CXXFLAGS_DEBUG += -pg
+#QMAKE_LFLAGS_DEBUG += -pg
 
 TARGET = cityplan_vectorization
 CONFIG += console
@@ -25,7 +25,8 @@ SOURCES += \
     src/collinearstring.cpp \
     src/collineargroup.cpp \
     src/collinearphrase.cpp \
-    src/statistics.cpp
+    src/statistics.cpp \
+    src/vectorize.cpp
 
 HEADERS += \
     include/areafilter.hpp \
@@ -42,15 +43,20 @@ HEADERS += \
     include/collinearstring.hpp \
     include/collineargroup.hpp \
     include/collinearphrase.hpp \
-    include/statistics.hpp
+    include/statistics.hpp \
+    include/vectorize.hpp
 
 INCLUDEPATH += "C:/opencv/build/include"
 
+# openCV libraries
 LIBS += -LC:/opencv/build/x86/mingw/bin \
             -lopencv_highgui300 \
             -lopencv_imgproc300 \
             -lopencv_core300 \
             -lopencv_imgcodecs300 \
+
+# Cairo library; for generating .svg files
+LIBS += -L"$$PWD/lib" -lcairo
 
 
 
