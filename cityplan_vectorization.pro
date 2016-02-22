@@ -44,7 +44,8 @@ HEADERS += \
     include/collineargroup.hpp \
     include/collinearphrase.hpp \
     include/statistics.hpp \
-    include/vectorize.hpp
+    include/vectorize.hpp \
+    include/RTree.hpp
 
 INCLUDEPATH += "C:/opencv/build/include"
 

@@ -1,8 +1,16 @@
+/**
+  * A program that takes an image, deletes text from it
+  * and then tries to convert it into a vector representation.
+  *
+  * Author: phugen
+  */
+
 #include "include/opencvincludes.hpp"
 #include "include/auxiliary.hpp"
 #include "include/unionfindcomponents.hpp"
 #include "include/areafilter.hpp"
 #include "include/collineargrouping.hpp"
+#include "include/zhangsuen.hpp"
 #include "include/vectorize.hpp"
 
 #include <iostream>
@@ -45,7 +53,7 @@ int main (int argc, char** argv)
     unionFindComponents(output, &components, 10); // size: 10
     areaFilter(&components, 10);
     collinearGrouping(*output, output, &components);
-    vectorizeImage(output, "vectorized");
+    vectorizeImage(output, "vectorized", 5);
 
     waitKey(0);
 }

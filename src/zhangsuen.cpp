@@ -4,6 +4,7 @@
  * Code for thinning a binary image using Zhang-Suen algorithm.
  */
 
+using namespace cv;
 
 
 /**
@@ -68,4 +69,8 @@ void thinning(cv::Mat& im)
     while (cv::countNonZero(diff) > 0);
 
     im *= 255;
+
+    namedWindow("Thinned", WINDOW_AUTOSIZE);
+    imshow("Thinned", im);
+
 }
