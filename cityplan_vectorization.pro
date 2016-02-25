@@ -26,7 +26,8 @@ SOURCES += \
     src/collineargroup.cpp \
     src/collinearphrase.cpp \
     src/statistics.cpp \
-    src/vectorize.cpp
+    src/vectorize.cpp \
+    src/vectorline.cpp
 
 HEADERS += \
     include/areafilter.hpp \
@@ -45,7 +46,9 @@ HEADERS += \
     include/collinearphrase.hpp \
     include/statistics.hpp \
     include/vectorize.hpp \
-    include/RTree.hpp
+    include/RTree.hpp \
+    include/vectorline.hpp \
+    src/vectorlinecpp.h
 
 INCLUDEPATH += "C:/opencv/build/include"
 

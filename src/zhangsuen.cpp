@@ -70,7 +70,7 @@ void thinning(cv::Mat& im)
 
     im *= 255;
 
-    namedWindow("Thinned", WINDOW_AUTOSIZE);
+    namedWindow("Thinned", WINDOW_NORMAL);
     imshow("Thinned", im);
 
 }
