@@ -47,8 +47,7 @@ HEADERS += \
     include/statistics.hpp \
     include/vectorize.hpp \
     include/RTree.hpp \
-    include/vectorline.hpp \
-    src/vectorlinecpp.h
+    include/vectorline.hpp
 
 INCLUDEPATH += "C:/opencv/build/include"
 

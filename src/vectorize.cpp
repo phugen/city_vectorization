@@ -45,12 +45,12 @@ struct vec2i_compare
 // "Out-of-image" pixels are treated as 0. (check if this is ok!)
 //
 // Expects a binary matrix in which line pixels are black (= 0).
-uint8_t encodeNeighbors (Mat* image, Vec2i curPixel)
+uint8_t encodeNeighbors (Mat* image, pixel* curPixel)
 {
     int rows = image->rows;
     int cols = image->cols;
-    int i = curPixel[0]; // y-coordinate
-    int j = curPixel[1]; // x-coordinate
+    int i = curPixel->coord[0]; // y-coordinate
+    int j = curPixel->coord[1]; // x-coordinate
     uint8_t encoding = 0;
 
 
@@ -157,239 +157,159 @@ void addToTable (vector<int>* neighborhoods, int* ruleTable, int rule)
 
 // Sets the rule to apply for each neighborhood.
 // Unset rules are rule 1, i.e. do nothing.
+// Each neighborhood is expected to has exactly ONE rule mapped to it!
 void initRuleTable(int* ruleTable)
 {
-    // initialize all rules to rule 1
-    //memset((void*) ruleTable, 1, sizeof(int) * 256);
+    // rule 1:
+    // (do nothing)
     ruleTable[0] = 1;
 
-    // rules set as given in the paper:
+    // -----------------------------------------
 
     // rule 2:
+    // (make a node)
     vector<int> temp = {2, 3, 4, 6, 7, 8, 10, 11, 12, 14, 15, 16, 18,
-                       19, 20, 22, 23, 24, 26, 27, 28, 30, 31};
+                        19, 20, 22, 23, 24, 26, 27, 28, 30, 31};
     addToTable(&temp, ruleTable, 2);
 
+
+    // ------- closeSingle rules ---------------
     // rule 3:
+    // (Make a node, close line of NE pixel)
     ruleTable[1] = 3;
     ruleTable[21] = 3;
 
     // rule 4:
+    // (Make a node, close line of W pixel)
     temp = {32, 42, 43, 46, 47, 48, 56, 58, 59, 60, 62, 63, 96, 106,
-           107, 110, 111, 112, 120, 122, 123, 124, 126, 127};
+            107, 110, 111, 112, 120, 122, 123, 124, 126, 127};
     addToTable(&temp, ruleTable, 4);
 
     // rule 5:
+    // (Make a node, close line of NW pixel)
     temp = {64, 74, 75, 78, 79, 82, 83, 84, 86, 87, 88, 90, 91, 92,
             94, 95};
     addToTable(&temp, ruleTable, 5);
 
     // rule 6:
+    // (Make a node, close line of N pixel)
+    // HIER FILTERN: alle die SHARE brauchen.
     temp = {128, 129, 131, 135, 138, 139, 142, 143, 146, 147, 148,
-           149, 150, 151, 154, 155, 158, 159, 192, 193, 195, 199,
-           202, 203, 206, 207, 210, 211, 212, 213, 214, 215, 218,
-           219, 222, 223, 200};
+            149, 150, 151, 154, 155, 158, 159, 192, 193, 195, 199,
+            202, 203, 206, 207, 210, 211, 212, 213, 214, 215, 218,
+            219, 222, 223, 200};
     addToTable(&temp, ruleTable, 6);
 
+
+    // ------------ extend rules --------------
     // rule 7:
+    // (Extend line of NE pixel)
     temp = {5, 9, 13, 17, 25, 29};
     addToTable(&temp, ruleTable, 7);
 
     // rule 8:
+    // (Extend line of W pixel)
     temp = {34, 35, 36, 38, 39, 40, 44, 50, 51, 52, 54, 55, 98, 99,
-           100, 102, 103, 104, 108, 114, 115, 116, 118, 119};
+            100, 102, 103, 104, 108, 114, 115, 116, 118, 119};
     addToTable(&temp, ruleTable, 8);
 
     // rule 9:
+    // (Extend line of NW pixel)
     temp = {66, 67, 68, 70, 71, 72, 76, 80};
     addToTable(&temp, ruleTable, 9);
 
     // rule 10:
+    // (Extend line of N pixel)
     temp = {130, 132, 133, 134, 136, 137, 140, 141, 144, 145, 152,
-           153, 156, 157, 194, 196, 197, 198, 201, 204, 205,
-           208, 209, 216, 217, 220, 221};
+            153, 156, 157, 194, 196, 197, 198, 200, 201, 204, 205,
+            208, 209, 216, 217, 220, 221};
     addToTable(&temp, ruleTable, 10);
 
+
+    // ------- connect rules ---------------
+
+    // CONNECT rules are CLOSEMULTIPLE rules without a following rule2_makeNode!
+
     // rule 11:
+    // (Connect line of W pixel with line of NE pixel)
     temp = {33, 49, 97, 113};
     addToTable(&temp, ruleTable, 11);
 
     // rule 12:
+    // (Connect line of NW pixel with line of NE pixel)
     ruleTable[65] = 12;
 
     // rule 13:
+    // (Connect line of W pixel with line of N pixel)
     temp = {160, 161, 176, 177};
     addToTable(&temp, ruleTable, 13);
 
+    // ------- closeMultiple rules -----------
     // rule 14:
+    // (Make a node, close line of W pixel, close line of NE pixel)
     temp = {37, 41, 45, 53, 57, 61, 101, 105, 109, 117, 121, 125};
     addToTable(&temp, ruleTable, 14);
 
     // rule 15:
+    // (Make a node, close line of NW pixel, close line of NE pixel)
     temp = {69, 73, 77, 81, 85, 89, 93};
     addToTable(&temp, ruleTable, 15);
 
     // rule 16:
+    // (Make a node, close line of W pixel, close line of N pixel)
     temp = {162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172,
-           173, 174, 175, 178, 179, 180, 181, 182, 183, 184, 185,
-           186, 187, 188, 189, 190, 191, 224, 225, 226, 227, 228,
-           229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239,
-           240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250,
-           251, 252, 253, 254, 255};
+            173, 174, 175, 178, 179, 180, 181, 182, 183, 184, 185,
+            186, 187, 188, 189, 190, 191, 224, 225, 226, 227, 228,
+            229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239,
+            240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250,
+            251, 252, 253, 254, 255};
     addToTable(&temp, ruleTable, 16);
 }
 
-// Implements the [] operator for maps
-// because it doesn't work for some reason (why)
-vectorLine* get_replace(Vec2i key, vectorLine* value, map<Vec2i, vectorLine*, vec2i_compare>* hashmap)
+
+// Create a new node as the start point of a vector.
+vectorLine* rule2_makeNode(set<vectorLine*>* lines, pixel* cur)
 {
-    auto it = hashmap->find(key);
+    vectorLine* new_line = new vectorLine();
+    new_line->setStart(cur);
+    lines->insert(new_line);
 
-    // found item: return iterator to current mapping
-    if (it != hashmap->end())
-      return (*it).second;
+    cur->isNode = true;
+    cur->line = new_line;
 
-    // didn't find item: insert key and mapping
-    // is there a way to just not replace it if it's there?
-    else
-    {
-        hashmap->insert(make_pair(key, value));
-        return (*it).second;
-    }
+    return new_line;
 }
 
-// Two lines end in the same spot, so create a node and
-// assign the node as both of the lines' endpoints.
-void closeMultiple (set<vectorLine*>* lines, map<Vec2i, vectorLine*, vec2i_compare>* pxToLine,
-                      map<Vec2i, vectorLine*, vec2i_compare>* nodeToLine, Vec2i cur, Vec2i end1, Vec2i end2)
+void rule16_closeMultW_N(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel* north, pixel* northWest, pixel* northEast)
 {
-    makeNode(lines, pxToLine, nodeToLine, cur);
-    closeSingle(lines, pxToLine, nodeToLine, cur, end1);
-    closeSingle(lines, pxToLine, nodeToLine, cur, end2);
-}
+    // NORTHWEST STATES?
 
-// Two lines meet in a non-extreme point and thus shouldn't share a node.
-// Connects the two lines by letting the first line "absorb" the second's pixels
-// (and endpoint) and deleting the second line from the line set.
-void connectLines(set<vectorLine*>* lines, map<Vec2i, vectorLine*, vec2i_compare>* pxToLine,
-                  map<Vec2i, vectorLine*, vec2i_compare>* nodeToLine, Vec2i cur, Vec2i conn1, Vec2i conn2)
-{
-    vectorLine* line1;
-    vectorLine* line2;
 
-    // if both points are nodes:
-    // create a new line that uses them as start
-    // and end points and which has exactly one pixel.
-    if(isNode(conn1, pxToLine) && isNode(conn2, pxToLine))
+    // north line was closed already
+    // so close only west line
+    if((northEast->line != NULL) &&
+       (northEast->coord != Vec2i(-1, -1))) // check if out of bounds - count as white pixel
     {
-        // get lines
-        line1 = get_replace(conn1, line1, nodeToLine);
-        line2 = get_replace(conn2, line2, nodeToLine);
+        west->line->setEnd(west);
 
-        // create new link line
-        vectorLine* new_line = makeNode(lines, pxToLine, nodeToLine, conn1);
-        new_line->setEnd(conn2);
-        new_line->addPixels(cur);
-
-        get_replace(conn2, new_line, nodeToLine);
-        get_replace(cur, new_line, pxToLine);
-        lines->insert(new_line);
-
-        // delete separately because erase only calls "direct" destructors
-        //delete line1;
-        //delete line2;
-
-        // delete old lines
-        lines->erase(line1);
-        lines->erase(line2);
+        if(west != west->line->getStart())
+            west->isNode = false;
     }
 
-    // only first point is a node:
-    // Set node as end point for line of second point
-    else if (isNode(conn1, pxToLine))
-    {
-        line2 = get_replace(conn2, line2, pxToLine);
-        line2->setEnd(conn1);
-
-        get_replace(conn1, line2, nodeToLine);
-        get_replace(cur, line2, pxToLine);
-        line2->addPixels(cur);
-
-        //delete line1;
-        lines->erase(line1);
-    }
-
-    // only second point is a node
-    // Set node as end point for line of first point
-    else if (isNode(conn2, pxToLine))
-    {
-        line1 = get_replace(conn1, line1, pxToLine);
-        line1->setEnd(conn2);
-
-        get_replace(conn2, line1, nodeToLine);
-        get_replace(cur, line1, pxToLine);
-        line2->addPixels(cur);
-
-        //delete line2;
-        lines->erase(line2);
-    }
-
-    // Both points belong to valid lines
-    // Let first line absorb the second one.
+    // normal vertical line, closeMult as usual
     else
     {
-        line1 = get_replace(conn1, line1, pxToLine);
-        line2 = get_replace(conn2, line2, pxToLine);
+        west->line->setEnd(west);
+        north->line->setEnd(north);
 
-        // update pixel to line mapping
-        for(auto px = line2->getPixels().begin(); px != line2->getPixels().end(); px++)
-        {
-            line1->addPixels(*px);
-            get_replace(*px, line1, pxToLine);
-        }
+        if(west != west->line->getStart())
+            west->isNode = false;
 
-        // set endpoint of first line to startpoint of second line
-        line1->setEnd(conn2);
-        get_replace(conn2, line1, nodeToLine);
+        if(north != north->line->getStart())
+            north->isNode = false;
 
-        // delete obsolete second line from line set
-        //delete line2;
-        lines->erase(line2);
+        rule2_makeNode(lines, cur);
     }
-}
-
-// Add the current pixel to the line "otherPx"
-// belongs to.
-void extendLine(set<vectorLine*>* lines, map<Vec2i, vectorLine*, vec2i_compare>* pxToLine,
-                map<Vec2i, vectorLine*, vec2i_compare>* nodeToLine, Vec2i cur, Vec2i otherPx)
-{
-    vectorLine* extend = NULL;
-
-    if(isNode(otherPx, pxToLine))
-        extend = get_replace(otherPx, extend, nodeToLine);
-
-    else
-        extend = get_replace(otherPx, extend, pxToLine);
-
-    // Extend line by current pixel
-    extend->addPixels(cur);
-    get_replace(cur, extend, pxToLine);
-}
-
-// One line ends, another begins. Assign the current pixel as ending point of the old line.
-void closeSingle(set<vectorLine*>* lines, map<Vec2i, vectorLine*, vec2i_compare>* pxToLine,
-                 map<Vec2i, vectorLine*, vec2i_compare>* nodeToLine, Vec2i cur, Vec2i otherPx)
-{
-    vectorLine* line = NULL;
-
-    // close old line
-    if(isNode(otherPx, pxToLine))
-        line = get_replace(otherPx, line, nodeToLine);
-
-    else
-        line = get_replace(otherPx, line, pxToLine);
-
-    line->setEnd(cur);
 
     // add "path" identification here?
     // are polygons always CCW? How to recover topology? For
@@ -397,30 +317,294 @@ void closeSingle(set<vectorLine*>* lines, map<Vec2i, vectorLine*, vec2i_compare>
     // same direction...
     // aren't the resulting graphs DAGs by default..?
     // Top to bottom walks only! Also, what about 3-junctions?
-
-
-
 }
 
-// Create a new node as the start point of a vector.
-vectorLine* makeNode(set<vectorLine*>* lines, map<Vec2i, vectorLine*, vec2i_compare>* pxToLine,
-                map<Vec2i, vectorLine*, vec2i_compare>* nodeToLine, Vec2i cur)
+
+void rule15_closeMultNW_NE(set<vectorLine*>* lines, pixel* cur, pixel* northWest, pixel* northEast)
 {
-    vectorLine* new_line = new vectorLine();
+    northWest->isNode = true;
+    northWest->line->setEnd(northWest);
 
-    new_line->setStart(cur);
-    get_replace(cur, new_line, nodeToLine);
-    lines->insert(new_line);
-    pxToLine->erase(cur); // remove "normal pixel" status
+    northEast->isNode = true;
+    northEast->line->setEnd(northEast);
 
-    return new_line;
+    rule2_makeNode(lines, cur);
 }
 
-// Check if cur is a node.
-bool isNode(Vec2i cur, map<Vec2i, vectorLine*, vec2i_compare>* pxToLine)
+
+void rule14_closeMultW_NE(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel* northEast)
 {
-    return (pxToLine->find(cur) == pxToLine->end());
+    west->isNode = true;
+    west->line->setEnd(west);
+
+    northEast->isNode = true;
+    northEast->line->setEnd(northEast);
+
+    rule2_makeNode(lines, cur);
 }
+
+void rule13_connectW_N(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel* north, pixel* northEast)
+{
+    // north is beginning of a line
+    // so only close W
+    if(northEast->line != NULL)
+    {
+        cur->isNode = true;
+        west->line->setEnd(cur);
+
+        if(west != west->line->getStart())
+            west->isNode = false;
+    }
+
+    // north is normal pixel
+    // so connect W with N
+    else
+    {
+        // close dangling line
+        cur->line = west->line;
+        west->line->setEnd(north->line->getEnd());
+
+        if(west != west->line->getStart())
+            west->isNode = false;
+
+        // add all pixels of north to west (needed?)
+
+        // erase old line
+        lines->erase(north->line);
+    }
+}
+
+
+void rule12_connectNW_NE(pixel* cur, pixel* northWest, pixel* northEast)
+{
+    cur->isNode = true;
+    northWest->line->setEnd(cur);
+    northEast->line->setEnd(cur);
+
+    if(northWest != northWest->line->getStart())
+        northWest->isNode = false;
+
+    if(northEast != northEast->line->getStart())
+        northEast->isNode = false;
+
+    cur->line = northWest->line;
+}
+
+void rule11_connectW_NE(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel* northEast)
+{
+    // set end of joining lines to cur
+    cur->isNode = true;
+    west->line->setEnd(northEast->line->getEnd());
+
+    // assign all pixels in northEast to west line (needed?)
+
+
+    // erase old line
+    lines->erase(northEast->line);
+
+    // revoke node status (probably not needed)
+    if(west != west->line->getStart())
+        west->isNode = false;
+
+    cur->line = west->line;
+}
+
+void rule10_extendN(set<vectorLine*>* lines, pixel* cur, pixel* north, pixel* northEast, pixel* northWest)
+{
+    // North is the start of a vector,
+    // create new line at cur
+    if(northEast->line != NULL)
+    {
+        rule2_makeNode(lines, cur);
+    }
+
+    // End of horizontal vector,
+    // close it and create new vector at cur
+    else if((north == north->line->getEnd()) &&
+       (northWest->line != NULL))
+    {
+        north->line->setEnd(north);
+        rule2_makeNode(lines, cur);
+    }
+
+    // no special case - just add cur to north line
+    else
+    {
+        // don't push end point! - needed for connectW_N
+        //???
+        cur->isNode = true;
+        north->line->setEnd(cur);
+        cur->line = north->line;
+
+        if(north != north->line->getStart())
+            north->isNode = false;
+    }
+}
+
+void rule9_extendNW(pixel* cur, pixel* northWest)
+{
+    // 66, 67, 70, 71, 72, 76,  nicht eher closeNW?
+    cur->isNode = true;
+    northWest->line->setEnd(cur);
+    cur->line = northWest->line;
+
+    // if west isn't the first point
+    // in the line, revoke its node status
+    if(northWest != northWest->line->getStart())
+        northWest->isNode = false;
+}
+
+void rule8_extendW(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel* northWest)
+{
+    // West is the end of a vector, close it and
+    // start new line at cur
+    if(west == west->line->getEnd() &&
+       northWest->line != NULL)
+    {
+        west->line->setEnd(west);
+        rule2_makeNode(lines, cur);
+    }
+
+    // west is part of the same line as cur,
+    // so just add cur to the line
+    else
+    {
+        // push end pointer
+        cur->isNode = true;
+        west->line->setEnd(cur);
+        cur->line = west->line;
+
+        // if west isn't the first point
+        // in the line, revoke its node status
+        if(west != west->line->getStart())
+            west->isNode = false;
+    }
+}
+
+void rule7_extendNE(pixel* cur, pixel* northEast)
+{
+    // set current point as new ending point
+    cur->isNode = true;
+    northEast->line->setEnd(cur);
+    cur->line = northEast->line;
+
+    // if northEast isn't the first point
+    // in the line, revoke its node status
+    if(northEast != northEast->line->getStart())
+        northEast->isNode = false;
+}
+
+void rule6_closeN(set<vectorLine*>* lines, pixel* cur, pixel* north, pixel* northWest, pixel* northEast)
+{
+    // north is start of a line; don't close it but
+    // instead begin new line at cur
+    if((north == north->line->getStart()) &&
+      (northEast->line != NULL))
+    {
+        rule2_makeNode(lines, cur);
+    }
+
+    // north is the end of a line; close it
+    // normally and make a node at cur
+    else
+    {
+        north->isNode = true;
+        north->line->setEnd(north);
+        rule2_makeNode(lines, cur);
+    }
+}
+
+void rule5_closeNW(set<vectorLine*>* lines, pixel* cur, pixel* northWest)
+{
+    northWest->isNode = true;
+    northWest->line->setEnd(northWest);
+
+    rule2_makeNode(lines, cur);
+}
+
+void rule4_closeW(set<vectorLine*>* lines, pixel* cur, pixel* west)
+{
+    west->isNode = false;
+    cur->isNode = true;
+    west->line->setEnd(cur);
+
+    //rule2_makeNode(lines, cur);
+}
+
+void rule3_closeNE(set<vectorLine*>* lines, pixel* cur, pixel* northEast)
+{
+    // Close rules: set to neighbor, NOT to cur,
+    // to avoid issues with rule2_makeNode - temp nodes
+    // should disappear in postprocessing anyway
+    northEast->isNode = true;
+    northEast->line->setEnd(northEast);
+
+    rule2_makeNode(lines, cur);
+}
+
+
+// Assign non-dummy values to neighbor pixels based
+// on whether the current pixel is in a corner etc.
+void assignNeighborPointers(Vec2i coord, Mat* image, pixel** northEast, pixel** north, pixel** northWest, pixel** west, vector<pixel*>* pixels)
+{
+    // in top left corner
+    if((coord[0] == 0) && (coord[1] == 0))
+    {
+        // none
+    }
+
+    // in top right corner
+    else if((coord[0]) == 0 && (coord[1] == (image->cols - 1)))
+    {
+        *west = (pixels->at(coord[0] * image->cols + (coord[1]-1)));
+    }
+
+    // in bottom left corner
+    else if(((coord[0]) == (image->rows - 1)) && (coord[1] == 0))
+    {
+        *north = (pixels->at((coord[0]-1) * image->cols + coord[1]));
+        *northEast = (pixels->at((coord[0]-1) * image->cols + (coord[1]+1)));
+    }
+
+    // in bottom right corner
+    else if(((coord[0]) == (image->rows - 1)) && (coord[1] == (image->cols - 1)))
+    {
+        *west = (pixels->at(coord[0] * image->cols + (coord[1]-1)));
+        *northWest = (pixels->at((coord[0]-1) * image->cols + (coord[1]-1)));
+        *north = (pixels->at((coord[0]-1) * image->cols + coord[1]));
+    }
+
+    // top border
+    else if(coord[0] == 0)
+    {
+        *west = (pixels->at(coord[0] * image->cols + (coord[1]-1)));
+    }
+
+    // left border
+    else if(coord[1] == 0)
+    {
+        *north = (pixels->at((coord[0]-1) * image->cols + coord[1]));
+        *northEast = (pixels->at((coord[0]-1) * image->cols + (coord[1]+1)));
+    }
+
+    // right border
+    else if(coord[1] == (image->rows - 1))
+    {
+        *west = (pixels->at(coord[0] * image->cols + (coord[1]-1)));
+        *northWest = (pixels->at((coord[0]-1) * image->cols + (coord[1]-1)));
+        *north = (pixels->at((coord[0]-1) * image->cols + coord[1]));
+    }
+
+    // anywhere else in the image
+    else
+    {
+        *west = (pixels->at(coord[0] * image->cols + (coord[1]-1)));
+        *northWest = (pixels->at((coord[0]-1) * image->cols + (coord[1]-1)));
+        *north = (pixels->at((coord[0]-1) * image->cols + coord[1]));
+        *northEast = (pixels->at((coord[0]-1) * image->cols + (coord[1]+1)));
+    }
+}
+
 
 // Applies the vectorizing rule that corresponds
 // to the neighborhood situation encoded by the
@@ -428,159 +612,269 @@ bool isNode(Vec2i cur, map<Vec2i, vectorLine*, vec2i_compare>* pxToLine)
 // The array ruleTable provides a lookup for each
 // of the 256 possible neighborhood states by listing
 // the rule that applies to each state.; // map each black pixel to a line
-void applyRule(Vec2i cur, uint8_t nBits, int* ruleTable, map<Vec2i, vectorLine*, vec2i_compare>* pxToLine,
-               map<Vec2i, vectorLine*, vec2i_compare>* nodeToLine, set<vectorLine*>* lines)
+void applyRule(Mat* image, pixel* cur, uint8_t nBits, int* ruleTable, set<vectorLine*>* lines, vector<pixel*>* pixels, pixel* dummy)
 {
+
+    Vec2i coord = cur->coord;
+
+    pixel* northEast = dummy;
+    pixel* north = dummy;
+    pixel* northWest = dummy;
+    pixel* west = dummy;
+
+    // predefine directional pixels based on current pixel
+    assignNeighborPointers(coord, image, &northEast, &north, &northWest, &west, pixels);
+
     // get rule from table
     int rule = ruleTable[nBits];
 
     // apply fitting rule
     switch (rule)
     {
-    case 1:
-    {
-        // do nothing
-        break;
-    }
+        case 1:
+        {
+            // do nothing
+            break;
+        }
 
-    case 2:
-    {
-        // make a node: node is starting point of only one line
-        makeNode(lines, pxToLine, nodeToLine, cur);
-        break;
-    }
+        case 2:
+        {
+            // make a node: node is starting point of only one line
+            rule2_makeNode(lines, cur);
+            break;
+        }
 
-    case 3:
-    {
-        // make a node
-        // and set end point of NE pixel line to node:
-        // Here, one node is both the ending point an starting point
-        // of two lines respectively.
-        closeSingle(lines, pxToLine, nodeToLine, cur, Vec2i(cur[0]-1, cur[1]+1));
-        makeNode(lines, pxToLine, nodeToLine, cur);
-        break;
-    }
+        case 3:
+        {
+            // make a node
+            // and set end point of NE pixel line to node:
+            // Here, one node is both the ending point an starting point
+            // of two lines respectively.
+            rule3_closeNE(lines, cur, northEast);
+            break;
+        }
 
-    case 4:
-    {
-        // make a node
-        // and set end point of W pixel line to node
-        closeSingle(lines, pxToLine, nodeToLine, cur, Vec2i(cur[0], cur[1]-1));
-        makeNode(lines, pxToLine, nodeToLine, cur);
-        break;
-    }
+        case 4:
+        {
+            // make a node
+            // and set end point of W pixel line to node
+            rule4_closeW(lines, cur, west);
+            break;
+        }
 
-    case 5:
-    {
-        // make a node
-        // and set end point of NW pixel line to node
-        closeSingle(lines, pxToLine, nodeToLine, cur, Vec2i(cur[0]-1, cur[1]-1));
-        makeNode(lines, pxToLine, nodeToLine, cur);
-        break;
-    }
+        case 5:
+        {
+            // make a node
+            // and set end point of NW pixel line to node
+            rule5_closeNW(lines, cur, northWest);
+            break;
+        }
 
-    case 6:
-    {
-        // make a node
-        // and set end point of N pixel line to node
-        closeSingle(lines, pxToLine, nodeToLine, cur, Vec2i(cur[0]-1, cur[1]));
-        makeNode(lines, pxToLine, nodeToLine, cur);
-        break;
-    }
+        case 6:
+        {
+            // make a node
+            // and set end point of N pixel line to node
+            rule6_closeN(lines, cur, north, northWest, northEast);
+            break;
+        }
 
-    case 7:
-    {
-        // Extend line of NE pixel: No local extreme, so the previous
-        // line simply continues.
-        extendLine(lines, pxToLine, nodeToLine, cur, Vec2i(cur[0]-1, cur[1]+1));
-        break;
-    }
+        case 7:
+        {
+            // Extend line of NE pixel: No local extreme, so the previous
+            // line simply continues.
+            rule7_extendNE(cur, northEast);
+            break;
+        }
 
-    case 8:
-    {
-        // Extend line of W pixel
-        extendLine(lines, pxToLine, nodeToLine, cur,  Vec2i(cur[0], cur[1]-1));
-        break;
-    }
+        case 8:
+        {
+            // Extend line of W pixel
+            rule8_extendW(lines, cur, west, northWest);
+            break;
+        }
 
-    case 9:
-    {
-        // Extend line of NW pixel
-        extendLine(lines, pxToLine, nodeToLine, cur,  Vec2i(cur[0]-1, cur[1]-1));
-        break;
-    }
+        case 9:
+        {
+            // Extend line of NW pixel
+            rule9_extendNW(cur, northWest);
+            break;
+        }
 
-    case 10:
-    {
-        // Extend line of N pixel
-        extendLine(lines, pxToLine, nodeToLine, cur,  Vec2i(cur[0]-1, cur[1]));
-        break;
-    }
+        case 10:
+        {
+            // Extend line of N pixel
+            rule10_extendN(lines, cur, north, northEast, northWest);
+            break;
+        }
 
-    case 11:
-    {
-        // Connect line of W pixel
-        // with line of NE pixel: Two lines meet, but the meeting
-        // point is not an extreme; delete one line and extend the
-        // other to cover all its pixels and assume its starting point
-        // as its ending point.
-        connectLines(lines, pxToLine, nodeToLine, Vec2i(cur[0], cur[1]-1), cur, Vec2i(cur[0]-1, cur[1]+1));
-        break;
-    }
+        case 11:
+        {
+            // Connect line of W pixel
+            // with line of NE pixel: Two lines meet in one point.
+            // Set both their endpoints to this point.
+            rule11_connectW_NE(lines, cur, west, northEast);
+            break;
+        }
 
-    case 12:
-    {
-        // Connect line of of NW pixel
-        // with line of NE pixel
-        connectLines(lines, pxToLine, nodeToLine, Vec2i(cur[0]-1, cur[1]-1), cur, Vec2i(cur[0]-1, cur[1]+1));
-        break;
-    }
+        case 12:
+        {
+            // Connect line of of NW pixel
+            // with line of NE pixel
+            rule12_connectNW_NE(cur, northWest, northEast);
+            break;
+        }
 
-    case 13:
-    {
-        // Connect line of W pixel
-        // with line of N pixel
-        connectLines(lines, pxToLine, nodeToLine, Vec2i(cur[0], cur[1]-1), cur, Vec2i(cur[0]-1, cur[1]));
-        break;
-    }
+        case 13:
+        {
+            // Connect line of W pixel
+            // with line of N pixel
+            rule13_connectW_N(lines, cur, west, north, northEast);
+            break;
+        }
 
-    case 14:
-    {
-        // Make a node
-        // and set end points of W pixel line
-        // AND of NE pixel line to the node
-        closeMultiple(lines, pxToLine, nodeToLine, cur, Vec2i(cur[0], cur[1]-1), Vec2i(cur[0]-1, cur[1]+1));
-        break;
-    }
+        case 14:
+        {
+            // Make a node
+            // and set end points of W pixel line
+            // AND of NE pixel line to the node
+            rule14_closeMultW_NE(lines, cur, west, northEast);
+            break;
+        }
 
-    case 15:
-    {
-        // Make a node
-        // and set end points of NW pixel line
-        // AND of NE pixel line to the node
-        closeMultiple(lines, pxToLine, nodeToLine, cur, Vec2i(cur[0]-1, cur[1]-1), Vec2i(cur[0]-1, cur[1]+1));
-        break;
-    }
+        case 15:
+        {
+            // Make a node
+            // and set end points of NW pixel line
+            // AND of NE pixel line to the node
+            rule15_closeMultNW_NE(lines, cur, northWest, northEast);
+            break;
+        }
 
-    case 16:
-    {
-        // Make a node
-        // and set end points of W pixel line
-        // AND of N pixel line to the node
-        closeMultiple(lines, pxToLine, nodeToLine, cur, Vec2i(cur[0], cur[1]-1), Vec2i(cur[0]-1, cur[1]));
-        break;
-    }
+        case 16:
+        {
+            // Make a node
+            // and set end points of W pixel line
+            // AND of N pixel line to the node
+            rule16_closeMultW_N(lines, cur, west, north, northWest, northEast);
+            break;
+        }
 
-    default:
-    {
-        // Rule not specified - error
-        cout << "Rule " << rule << " was not specified!\n";
-        assert(rule > 0 && rule < 17);
+        default:
+        {
+            // Rule not specified - error
+            cout << "Rule " << rule << " was not specified!\n";
+            assert(rule > 0 && rule < 17);
+        }
     }
-    }
-
 }
 
+// Initialize all pixels with their coordinates
+// in the picture.
+void initPixels(vector<pixel*>* pixels, Mat* image)
+{
+    for(int i = 0; i < image->rows; i++)
+    {
+        for(int j = 0; j < image->cols; j++)
+        {
+            pixels->at(i * image->cols + j) = new pixel(Vec2i(i, j), NULL, false);
+        }
+    }
+}
+
+// debug function: outputs binary encoding
+// of a neighborhood state as an image.
+void stateToImage (Mat image, int nbh)
+{
+    int nbh_orig = nbh;
+
+    int rowstep = image.rows / 3;
+    int colstep = image.cols / 3;
+
+    int maxcode = 128;
+    int x, y;
+
+    x = colstep;
+    y = rowstep;
+
+    // fill image with white color
+    rectangle(image, Rect(0, 0, image.cols, image.rows), Scalar(255, 255, 255), CV_FILLED);
+
+    // draw center
+    rectangle(image, Rect(x, y, colstep, rowstep), Scalar(0, 0, 255), CV_FILLED);
+
+    for (maxcode = 128; nbh > 0; maxcode /= 2)
+    {
+        if(nbh - 128 >= 0 && maxcode == 128)
+        {
+            nbh -= 128;
+            x = colstep;
+            y = 0;
+        }
+
+        else if (nbh - 64 >= 0 && maxcode == 64)
+        {
+            nbh -= 64;
+            x = 0;
+            y = 0;
+        }
+
+        else if (nbh - 32 >= 0 && maxcode == 32)
+        {
+            nbh -= 32;
+            x = 0;
+            y = rowstep;
+        }
+
+        else if (nbh - 16 >= 0 && maxcode == 16)
+        {
+            nbh -= 16;
+            x = 0;
+            y = 2 * rowstep;
+        }
+
+        else if (nbh - 8 >= 0 && maxcode == 8)
+        {
+            nbh -= 8;
+            x = colstep;
+            y = 2 * rowstep;
+        }
+
+        else if (nbh - 4 >= 0 && maxcode == 4)
+        {
+            nbh -= 4;
+            x = 2 * colstep;
+            y = 2 * rowstep;
+        }
+
+        else if (nbh - 2 >= 0 && maxcode == 2)
+        {
+            nbh -= 2;
+            x = 2 * colstep;
+            y = rowstep;
+        }
+
+        else if (nbh - 1 >= 0 && maxcode == 1)
+        {
+            nbh -= 1;
+            x = 2 * colstep;
+            y = 0;
+        }
+
+        rectangle(image, Rect(x, y, colstep, rowstep), Scalar(0, 0, 0), CV_FILLED);
+    }
+
+    // draw cell separation lines
+    line(image, Point(colstep, 0), Point(colstep, 3 * rowstep), Scalar(255, 0, 0), 3);
+    line(image, Point(2 * colstep, 0), Point(2 * colstep, 3 * rowstep), Scalar(255, 0, 0), 3);
+
+    line(image, Point(0, rowstep), Point(3 * colstep, rowstep), Scalar(255, 0, 0), 3);
+    line(image, Point(0, 2 * rowstep), Point(3 * colstep, 2 * rowstep), Scalar(255, 0, 0), 3);
+
+
+    string number = std::to_string(nbh_orig);
+    string filename = number + string(".png");
+    imwrite(filename.c_str(), image);
+}
 
 // Expects a thinned binary image (black = line pixels, white = background).
 //
@@ -596,12 +890,25 @@ void applyRule(Vec2i cur, uint8_t nBits, int* ruleTable, map<Vec2i, vectorLine*,
 // restoring topology.
 set<vectorLine*> mooreVector(Mat image)
 {
-    int ruleTable[256];
-    initRuleTable(ruleTable);
+    /*Mat test = Mat(300, 300, CV_8UC1);
+    cvtColor(test, test, CV_GRAY2BGR);
+    stateToImage(test, (uint8_t) 50);
 
-    set<vectorLine*> lines; // all found lines
-    map<Vec2i, vectorLine*, vec2i_compare> pxToLine; // map each black pixel to a line
-    map<Vec2i, vectorLine*, vec2i_compare> nodeToLine; // map each endpoint to the line it belongs to
+    for(int i = 1; i < 256; i++)
+    {
+        stateToImage(test, i);
+    }
+
+    waitKey(0);*/
+
+    int ruleTable[256]; // links each neighborhood encoding to a rule
+    vector<pixel*>* pixels = new vector<pixel*>((image.rows + 2) * (image.cols + 2)); // states of all pixels (+ dummy values for 1px border)
+    pixel* dummy = new pixel(Vec2i(-1, -1), NULL, false);
+
+    initRuleTable(ruleTable);
+    initPixels(pixels, &image);
+
+    set<vectorLine*> lines; // all found vector lines
     vector<vector<vectorLine>> paths; // connected vector lines: lines that share a node
 
     // transform matrix points one by one
@@ -613,14 +920,30 @@ set<vectorLine*> mooreVector(Mat image)
             // look only at black pixels
             if(image.at<uchar>(i, j) == 0)
             {
+                // get current pixel pointer
+                int64_t addr = i * image.cols + j;
+
+                pixel* cur = pixels->at(addr);
+
                 // get neighborhood encoding of current pixel
-                uint8_t nbh = encodeNeighbors(&image, Vec2i(i, j));
+                uint8_t nbh = encodeNeighbors(&image, cur);
 
                 // apply neighborhood rule
-                applyRule(Vec2i(i, j), nbh, ruleTable, &pxToLine, &nodeToLine, &lines);
+                applyRule(&image, cur, nbh, ruleTable, &lines, pixels, dummy);
             }
         }
     }
+
+    // close dangling lines by setting endpoint to startpoint
+    for(auto l = lines.begin(); l != lines.end(); l++)
+    {
+        if((*l)->getEnd() == NULL)
+        {
+            (*l)->setEnd((*l)->getStart());
+        }
+    }
+
+    delete dummy;
 
     return lines;
 }
@@ -629,23 +952,27 @@ set<vectorLine*> mooreVector(Mat image)
 // Create a .svg file "filename.svg" based on the extracted vector lines.
 void vectorsToFile (Mat* image, set<vectorLine*> lines, string filename)
 {
+    namedWindow("before", WINDOW_NORMAL);
+    imshow("before", *image);
+
     // debug: overlay found lines on image in blue
-    cvtColor(*image, *image, CV_GRAY2RGB);
     Mat vectoronly = Mat(image->rows, image->cols, image->type());
+    cvtColor(*image, vectoronly, CV_GRAY2RGB);
 
     for(auto l = lines.begin(); l != lines.end(); l++)
     {
-        Vec2i start = (*l)->getStart();
-        Vec2i end = (*l)->getEnd();
+        vectorLine* li = *l;
+        pixel* start = li->getStart();
+        pixel* end = li->getEnd();
 
-        Point pt1 = Point(start[1], start[0]);
-        Point pt2 = Point(end[1], end[0]);
+        Point pt1 = Point(start->coord[1], start->coord[0]);
+        Point pt2 = Point(end->coord[1], end->coord[0]);
 
         line(vectoronly, pt1, pt2, Scalar(255, 0, 0), 1);
     }
 
-    namedWindow("VECTORIZED", WINDOW_NORMAL);
-    imshow("VECTORIZED", vectoronly);
+    namedWindow("VECTORS", WINDOW_NORMAL);
+    imshow("VECTORS", vectoronly);
 
     // Set up cairo canvas
     cairo_surface_t *surface;
@@ -659,17 +986,34 @@ void vectorsToFile (Mat* image, set<vectorLine*> lines, string filename)
     // Write line segment descriptions to .svg file
     for(auto l = lines.begin(); l != lines.end(); l++)
     {
-        Vec2i start = (*l)->getStart();
-        Vec2i end = (*l)->getEnd();
+        vectorLine* li = *l;
+        pixel* start = li->getStart();
+        pixel* end = li->getEnd();
 
-        cairo_move_to(cr, start[1], start[0]);
-        cairo_line_to(cr, end[1], end[0]);
+        cairo_move_to(cr, start->coord[1], start->coord[0]);
+        cairo_line_to(cr, end->coord[1], end->coord[0]);
         cairo_stroke(cr);
     }
 
     // Free canvas
     cairo_surface_destroy(surface);
     cairo_destroy(cr);
+
+    // Free pixels
+    /*for(int i = 0; i < image.rows; i++)
+    {
+        for(int j = 0; j < image.cols; j++)
+        {
+            delete pixels->at(i * image.cols + j);
+        }
+    }
+    delete pixels;*/
+
+    // Free lines
+    for(auto l = lines.begin(); l != lines.end(); l++)
+    {
+        delete *l;
+    }
 }
 
 
