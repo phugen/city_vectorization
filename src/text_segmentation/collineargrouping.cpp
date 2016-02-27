@@ -8,18 +8,18 @@
 
 #define _USE_MATH_DEFINES
 
-#include "include/collineargrouping.hpp"
+#include "include/text_segmentation/collineargrouping.hpp"
 #include <cmath>
 #include <iostream>
 #include <fstream>
 #include <map>
 
-#include "include/auxiliary.hpp"
-#include "include/colorconversions.hpp"
-#include "include/customhoughtransform.hpp"
-#include "include/areafilter.hpp"
-#include "include/collinearstring.hpp"
-#include "include/statistics.hpp"
+#include "include/text_segmentation/auxiliary.hpp"
+#include "include/text_segmentation/colorconversions.hpp"
+#include "include/text_segmentation/customhoughtransform.hpp"
+#include "include/text_segmentation/areafilter.hpp"
+#include "include/text_segmentation/collinearstring.hpp"
+#include "include/text_segmentation/statistics.hpp"
 
 using namespace std;
 using namespace cv;

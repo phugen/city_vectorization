@@ -6,12 +6,12 @@
   */
 
 #include "include/opencvincludes.hpp"
-#include "include/auxiliary.hpp"
-#include "include/unionfindcomponents.hpp"
-#include "include/areafilter.hpp"
-#include "include/collineargrouping.hpp"
-#include "include/zhangsuen.hpp"
-#include "include/vectorize.hpp"
+#include "include/text_segmentation/auxiliary.hpp"
+#include "include/text_segmentation/unionfindcomponents.hpp"
+#include "include/text_segmentation/areafilter.hpp"
+#include "include/text_segmentation/collineargrouping.hpp"
+#include "include/vectorization/zhangsuen.hpp"
+#include "include/vectorization/vectorize.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -50,7 +50,7 @@ int main (int argc, char** argv)
     Vec3b thresholds = Vec3b(180, 180, 180);
 
     getBlackLayer(thresholds, original, output);
-    unionFindComponents(output, &components, 0); // size: 10
+    unionFindComponents(output, &components, 10); // size: 10
     areaFilter(&components, 10);
     collinearGrouping(*output, output, &components);
     vectorizeImage(output, "vectorized");

@@ -1,21 +1,6 @@
-/**
-  * Implements a raster-to-vector graphic transformation
-  * and outputs the vector graphic as an .svg.
-  *
-  * Uses an R-Tree implementation due to
-  * http://superliminal.com/sources/sources.htm
-  *
-  * Author: phugen
-  */
-
-#include "include/vectorize.hpp"
-#include "include/cairo/cairo.h"
-#include "include/cairo/cairo-svg.h"
-#include "include/RTree.hpp"
-#include "include/zhangsuen.hpp"
+#include "include/vectorization/vectorize.hpp"
 
 #include <map>
-#include <set>
 #include <cstdint>
 #include <iostream>
 
@@ -272,6 +257,7 @@ vectorLine* rule2_makeNode(set<vectorLine*>* lines, pixel* cur)
 {
     vectorLine* new_line = new vectorLine();
     new_line->setStart(cur);
+    new_line->setEnd(cur);
     lines->insert(new_line);
 
     cur->isNode = true;
@@ -360,17 +346,15 @@ void rule13_connectW_N(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel* 
     // so connect W with N
     else
     {
-        // close dangling line
+        cur->isNode = true;
         cur->line = west->line;
-        west->line->setEnd(north->line->getEnd());
+        west->line->setEnd(cur);
+        north->line->setEnd(north);
 
         if(west != west->line->getStart())
             west->isNode = false;
 
-        // add all pixels of north to west (needed?)
-
-        // erase old line
-        lines->erase(north->line);
+        north->isNode = true;
     }
 }
 
@@ -394,13 +378,7 @@ void rule11_connectW_NE(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel*
 {
     // set end of joining lines to cur
     cur->isNode = true;
-    west->line->setEnd(northEast->line->getEnd());
-
-    // assign all pixels in northEast to west line (needed?)
-
-
-    // erase old line
-    lines->erase(northEast->line);
+    west->line->setEnd(cur);
 
     // revoke node status (probably not needed)
     if(west != west->line->getStart())
@@ -526,9 +504,9 @@ void rule4_closeW(set<vectorLine*>* lines, pixel* cur, pixel* west)
 {
     west->isNode = false;
     cur->isNode = true;
-    west->line->setEnd(cur);
+    west->line->setEnd(west);
 
-    //rule2_makeNode(lines, cur);
+    rule2_makeNode(lines, cur);
 }
 
 void rule3_closeNE(set<vectorLine*>* lines, pixel* cur, pixel* northEast)
@@ -588,7 +566,7 @@ void assignNeighborPointers(Vec2i coord, Mat* image, pixel** northEast, pixel** 
     }
 
     // right border
-    else if(coord[1] == (image->rows - 1))
+    else if(coord[1] == (image->cols - 1))
     {
         *west = (pixels->at(coord[0] * image->cols + (coord[1]-1)));
         *northWest = (pixels->at((coord[0]-1) * image->cols + (coord[1]-1)));
@@ -888,7 +866,7 @@ void stateToImage (Mat image, int nbh)
 // Also contains additional postprocessing of the vectors by means of
 // the Douglas-Pecker-Rahmer algorithm for simplifying lines and
 // restoring topology.
-set<vectorLine*> mooreVector(Mat image)
+map<pixel*, vectorLine*> mooreVector(Mat image)
 {
     /*Mat test = Mat(300, 300, CV_8UC1);
     cvtColor(test, test, CV_GRAY2BGR);
@@ -909,7 +887,6 @@ set<vectorLine*> mooreVector(Mat image)
     initPixels(pixels, &image);
 
     set<vectorLine*> lines; // all found vector lines
-    vector<vector<vectorLine>> paths; // connected vector lines: lines that share a node
 
     // transform matrix points one by one
     // by applying rule according to neighborhood
@@ -934,6 +911,8 @@ set<vectorLine*> mooreVector(Mat image)
         }
     }
 
+    delete dummy;
+
     // close dangling lines by setting endpoint to startpoint
     for(auto l = lines.begin(); l != lines.end(); l++)
     {
@@ -943,257 +922,14 @@ set<vectorLine*> mooreVector(Mat image)
         }
     }
 
-    delete dummy;
-
-    return lines;
-}
-
-
-// Create a .svg file "filename.svg" based on the extracted vector lines.
-void vectorsToFile (Mat* image, set<vectorLine*> lines, string filename)
-{
-    namedWindow("before", WINDOW_NORMAL);
-    imshow("before", *image);
-
-    // debug: overlay found lines on image in blue
-    Mat vectoronly = Mat(image->rows, image->cols, image->type());
-    cvtColor(*image, vectoronly, CV_GRAY2RGB);
+    // build node->line mapping
+    map<pixel*, vectorLine*> nodeToLine;
 
     for(auto l = lines.begin(); l != lines.end(); l++)
     {
-        vectorLine* li = *l;
-        pixel* start = li->getStart();
-        pixel* end = li->getEnd();
-
-        Point pt1 = Point(start->coord[1], start->coord[0]);
-        Point pt2 = Point(end->coord[1], end->coord[0]);
-
-        line(vectoronly, pt1, pt2, Scalar(255, 0, 0), 1);
+        nodeToLine.insert(make_pair((*l)->getStart(), *l));
+        nodeToLine.insert(make_pair((*l)->getEnd(), *l));
     }
 
-    namedWindow("VECTORS", WINDOW_NORMAL);
-    imshow("VECTORS", vectoronly);
-
-    // Set up cairo canvas
-    cairo_surface_t *surface;
-    cairo_t *cr;
-    surface = cairo_svg_surface_create((filename + ".svg").c_str(), image->cols, image->rows);
-    cr = cairo_create(surface);
-    cairo_set_source_rgb(cr, 0, 0, 0); // set background color
-    cairo_set_line_width(cr, 1); // set line width
-    cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE); // don't smoothen line ends
-
-    // Write line segment descriptions to .svg file
-    for(auto l = lines.begin(); l != lines.end(); l++)
-    {
-        vectorLine* li = *l;
-        pixel* start = li->getStart();
-        pixel* end = li->getEnd();
-
-        cairo_move_to(cr, start->coord[1], start->coord[0]);
-        cairo_line_to(cr, end->coord[1], end->coord[0]);
-        cairo_stroke(cr);
-    }
-
-    // Free canvas
-    cairo_surface_destroy(surface);
-    cairo_destroy(cr);
-
-    // Free pixels
-    /*for(int i = 0; i < image.rows; i++)
-    {
-        for(int j = 0; j < image.cols; j++)
-        {
-            delete pixels->at(i * image.cols + j);
-        }
-    }
-    delete pixels;*/
-
-    // Free lines
-    for(auto l = lines.begin(); l != lines.end(); l++)
-    {
-        delete *l;
-    }
-}
-
-
-// Expects binary image (blackLayer)
-void vectorizeImage (Mat* image, string filename)
-{
-    cout << "\n ------------------------- \n";
-    cout << "Starting vectorization ...\n";
-
-    set<vectorLine*> lines;
-    Mat inverted = Mat(image->rows, image->cols, image->type());
-    Mat thinned = Mat(image->rows, image->cols, image->type());
-
-    // thin image using Zhang-Suen
-    cout << "Extracting image skeleton... \n";
-    bitwise_not(*image, inverted);
-    thinning(inverted);
-    bitwise_not(inverted, thinned);
-
-    imwrite("thinned.png", thinned);
-
-    // create vector lines
-    cout << "Extracting vectors from raster image... \n";
-    lines = mooreVector(thinned);
-
-    // refine vectors by removing unnecessary nodes
-    cout << "Refining vector data... \n";
-    // refineVectors(lines);
-
-    // recover image topology and add color
-    cout << "Recovering image topology... \n";
-    // recoverTopology(lines);
-
-    // write vector lines to file
-    cout << "Writing vector data to file << " << filename << ".svg...\n";
-    vectorsToFile(&thinned, lines, filename);
-
-    // delete allocated line objects
-    cout << "Cleaning up... \n";
-    for(auto l = lines.begin(); l != lines.end(); l++)
-        delete (*l);
-
-    cout << "VECTORIZATION DONE!\n";
-}
-
-// The arguments for the R-Tree callback function.
-struct rtree_arg
-{
-    map<int, Vec2f>* hashmap; // maps R-Tree IDs to point coordinates
-    int maxDist; // for distance checks within the MBR
-    Vec4f input; // line points of input point's line
-    Vec2f found; // the nearest neighbor that is <= maxDist away
-    int found_id; // id of the found point
-};
-
-// Callback function for the R-Tree.
-// Stores the nearest neighbor in the argument struct.
-bool rCallback(int id, void* arg)
-{
-    struct rtree_arg* args = (struct rtree_arg*) arg;
-
-    // perform lookup in hashmap
-    Vec2f maybe = (*(args->hashmap->find(id))).second;
-
-    // check distance from input point to found point;
-    // because a rectangle is used, the distance could
-    // be > maxDist, even if the point is inside the rectangle
-    double dist = sqrt(pow(args->input[0] - maybe[0], 2) + pow(args->input[1] - maybe[1], 2));
-
-    // adhere to max dist threshold and don't find own line points
-    if((dist <= args->maxDist) &&
-       (args->input[0] != args->found[0] && args->input[1] != args->found[1]) &&
-       (args->input[2] != args->found[0] && args->input[3] != args->found[1]))
-    {
-        //cout << dist <<  " \n";
-        args->found = maybe;
-        args->found_id = id;
-    }
-
-    else
-        return true; // keep searching
-
-    return false; // we only care about the nearest neighbor!
-}
-
-// Attempts to join lines in order to close gaps
-// and decrease the total line count.
-// maxDist is the maximum acceptable distance for linking
-// two segments.
-void refineVectors (std::set<vectorLine *> *lines)
-{
-    // R-Tree for starting points: int IDs (can't handle Vec2f - maybe array?), float values, 2 dimensions.
-    /*RTree<int, float, 2, float> start_tree;
-    map<int, Vec2f> id_to_pos; // id -> (x,y) lookup table
-
-    // set arguments for R-tree callback function
-    struct rtree_arg arg;
-    arg.maxDist = maxDist;
-    arg.hashmap = &id_to_pos;
-
-    // initialize tree with all starting points of all
-    // found segments
-    int count = 0;
-    for(int i = 0; i < (int) lines->size(); i++, count+=2)
-    {
-        Vec4f cur = lines->at(i);
-        const float MBR_min[2] = {cur[0], cur[1]};
-        const float MBR_max[2] = {cur[0], cur[1]};
-        const float MBR_min2[2] = {cur[2], cur[3]};
-        const float MBR_max2[2] = {cur[2], cur[3]};
-
-        start_tree.Insert(MBR_min, MBR_max, count);
-        start_tree.Insert(MBR_min2, MBR_max2, count+1);
-        arg.hashmap->insert(make_pair(count, Vec2f(cur[0], cur[1]))); // add id to lookup table
-        arg.hashmap->insert(make_pair(count+1, Vec2f(cur[2], cur[3])));
-    }
-
-    // for each ending point: query R-Tree and find closest
-    // starting point that that obeys the maxDist threshold
-    for(auto l = lines->begin(); l != lines->end(); l++)
-    {   
-        // construct search MBR around the current endpoint
-        const float MBR_min[2] = {(*l)[2] - maxDist, (*l)[3] - maxDist};
-        const float MBR_max[2] = {(*l)[2] + maxDist, (*l)[3] + maxDist};
-
-        // set current endpoints as search input
-        arg.input = Vec4f((*l)[0], (*l)[1], (*l)[2], (*l)[3]);
-
-        // initialize found vector to dummy value
-        // in case no points are within maxDist
-        arg.found = Vec2f(-1, -1);
-
-        // Search for the closest start point
-        start_tree.Search(MBR_min, MBR_max, rCallback, (void*) &arg);
-
-        // if a point was found, perform edge linking
-        if(arg.found[0] != -1)
-        {
-            // update R-Tree by removing
-            // the old point - the updated point
-            // is already in the tree!
-            const float MBR_min2[2] = {(*l)[2], (*l)[3]};
-            const float MBR_max2[2] = {(*l)[2], (*l)[3]};
-
-
-            Vec4f c = *l;
-            //cout << c[0] << "," << c[1] << "->" << c[2] << "," << c[3] << " wird zu " << c[0] << "," << c[1] << "->" << arg.found[0] << "," << arg.found[1] << "\n";
-            //waitKey(0);
-
-            // Pre-emptive "destructive" edge linking: Change endpoint to newly found point
-            (*l)[2] = arg.found[0];
-            (*l)[3] = arg.found[1];
-
-            start_tree.Remove(MBR_min2, MBR_max2, arg.found_id);
-
-            // Postprocessive constructive edge linking:
-            // Insert new line between endpoints
-            cairo_move_to(cr, arg.input[2], arg.input[3]);
-            cairo_line_to(cr, arg.found[0], arg.found[1]);
-            cairo_stroke(cr);
-        }
-    }
-
-
-    // check if the next line's starting point
-    // is close the the current endpoint; If yes,
-    // replace the endpoint of the current line by
-    // the next line's starting point.
-    if((l+1) != lines.end())
-    {
-        Vec4f next = *(l+1);
-
-        // use euclidean distance to compare cur.end and next.start
-        double dist = sqrt(pow((cur[2] - next[0]), 2) + pow((cur[3] - next[1]), 2));
-
-        // join lines
-        if(dist <= maxDist)
-        {
-            cur[2] = next[0];
-            cur[3] = next[1];
-        }
-    }*/
+    return nodeToLine;
 }

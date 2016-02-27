@@ -5,8 +5,8 @@
   * Author: phugen
   */
 
-#include "include/collinearstring.hpp"
-#include "include/auxiliary.hpp"
+#include "include/text_segmentation/collinearstring.hpp"
+#include "include/text_segmentation/auxiliary.hpp"
 
 using namespace std;
 using namespace cv;

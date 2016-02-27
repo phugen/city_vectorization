@@ -51,7 +51,7 @@
 //
 //M*/
 
-#include "include/customhoughtransform.hpp"
+#include "include/text_segmentation/customhoughtransform.hpp"
 #include <iostream>
 #include <map>
 

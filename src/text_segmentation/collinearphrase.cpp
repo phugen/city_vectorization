@@ -1,4 +1,4 @@
-#include "include/collinearphrase.hpp"
+#include "include/text_segmentation/collinearphrase.hpp"
 
 CollinearPhrase::CollinearPhrase(){}
 

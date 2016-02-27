@@ -1,9 +1,9 @@
 #pragma once
 
 #include <vector>
-#include "include/connectedcomponent.hpp"
-#include "include/collineargroup.hpp"
-#include "include/collinearphrase.hpp"
+#include "include/text_segmentation/connectedcomponent.hpp"
+#include "include/text_segmentation/collineargroup.hpp"
+#include "include/text_segmentation/collinearphrase.hpp"
 
 class CollinearString
 {

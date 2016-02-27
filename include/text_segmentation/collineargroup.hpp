@@ -1,7 +1,7 @@
 #ifndef COLLINEARGROUP_HPP
 #define COLLINEARGROUP_HPP
 
-#include "include/connectedcomponent.hpp"
+#include "include/text_segmentation/connectedcomponent.hpp"
 
 class CollinearGroup
 {

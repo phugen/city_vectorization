@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "include/opencvincludes.hpp"
-#include "include/connectedcomponent.hpp"
+#include "include/text_segmentation/connectedcomponent.hpp"
 
 cv::Vec2i pointToVec (cv::Point p);
 std::vector<cv::Vec2i> pointToVec (std::vector<cv::Point> pl);

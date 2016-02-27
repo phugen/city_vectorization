@@ -1,4 +1,4 @@
-#include "include/zhangsuen.hpp"
+#include "include/vectorization/zhangsuen.hpp"
 
 /**
  * Code for thinning a binary image using Zhang-Suen algorithm.

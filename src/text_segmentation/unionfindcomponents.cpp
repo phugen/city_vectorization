@@ -7,10 +7,10 @@
   * Author: Phugen
   */
 
-#include "include/unionfindcomponents.hpp"
-#include "include/unionfind.hpp"
-#include "include/auxiliary.hpp"
-#include "include/colorconversions.hpp"
+#include "include/text_segmentation/unionfindcomponents.hpp"
+#include "include/text_segmentation/unionfind.hpp"
+#include "include/text_segmentation/auxiliary.hpp"
+#include "include/text_segmentation/colorconversions.hpp"
 
 #include <iostream>
 #include <set>

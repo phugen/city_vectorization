@@ -6,8 +6,8 @@
   * Author: Phugen
   */
 
-#include "include/connectedcomponent.hpp"
-#include "include/auxiliary.hpp"
+#include "include/text_segmentation/connectedcomponent.hpp"
+#include "include/text_segmentation/auxiliary.hpp"
 
 using namespace std;
 using namespace cv;

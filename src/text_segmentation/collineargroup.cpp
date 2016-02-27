@@ -1,4 +1,4 @@
-#include "include/collineargroup.hpp"
+#include "include/text_segmentation/collineargroup.hpp"
 
 CollinearGroup::CollinearGroup()
 {

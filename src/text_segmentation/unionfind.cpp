@@ -4,7 +4,7 @@
   * Author: Kartik Kukreja (https://kartikkukreja.wordpress.com)
   */
 
-#include "include/unionfind.hpp"
+#include "include/text_segmentation/unionfind.hpp"
 
 
 // Create an empty union find data structure with N isolated sets.

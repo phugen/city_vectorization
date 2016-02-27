@@ -5,7 +5,7 @@
   * Author: phugen
   */
 
-#include "include/statistics.hpp"
+#include "include/text_segmentation/statistics.hpp"
 
 #include <random>
 #include <chrono>

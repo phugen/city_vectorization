@@ -5,7 +5,7 @@
   * Author: Phugen
   */
 
-#include "include/colorconversions.hpp"
+#include "include/text_segmentation/colorconversions.hpp"
 #include "include/opencvincludes.hpp"
 #include <iostream>
 

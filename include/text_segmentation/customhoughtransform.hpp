@@ -1,11 +1,12 @@
 #pragma once
 
-#include "opencvincludes.hpp"
+#include "include/opencvincludes.hpp"
+#include "include/vec2icompare.hpp"
 
 #include <vector>
 #include <map>
 
-#include "include/vec2icompare.hpp"
+
 
 // Mode defines for Hough extraction method
 #define THRESH_GT 0

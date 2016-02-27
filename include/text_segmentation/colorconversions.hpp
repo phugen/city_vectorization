@@ -1,6 +1,6 @@
 #pragma once
 
-#include "opencvincludes.hpp"
+#include "include/opencvincludes.hpp"
 
 cv::Vec3i RGBtoHSV (cv::Vec3i rgb);
 cv::Vec3i HSVtoRGB (cv::Vec3i hsv);

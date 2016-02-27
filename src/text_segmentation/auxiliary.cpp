@@ -5,9 +5,9 @@
   * Author: Phugen
   */
 
-#include "include/auxiliary.hpp"
-#include "include/colorconversions.hpp"
-#include "include/connectedcomponent.hpp"
+#include "include/text_segmentation/auxiliary.hpp"
+#include "include/text_segmentation/colorconversions.hpp"
+#include "include/text_segmentation/connectedcomponent.hpp"
 
 #include <stack>
 #include <list>

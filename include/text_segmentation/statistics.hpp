@@ -1,6 +1,6 @@
 #pragma once
 
-#include <include/connectedcomponent.hpp>
+#include <include/text_segmentation/connectedcomponent.hpp>
 
 typedef struct parametricLine parametricLine;
 

@@ -7,9 +7,9 @@
 
 #define _USE_MATH_DEFINES
 
-#include "include/areafilter.hpp"
-#include "include/auxiliary.hpp"
-#include "include/statistics.hpp"
+#include "include/text_segmentation/areafilter.hpp"
+#include "include/text_segmentation/auxiliary.hpp"
+#include "include/text_segmentation/statistics.hpp"
 
 #include <cmath>
 #include <iostream>

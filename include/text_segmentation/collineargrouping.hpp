@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "opencvincludes.hpp"
+#include "include/opencvincludes.hpp"
 #include "connectedcomponent.hpp"
 
 struct compareByLineDistance;
