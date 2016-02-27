@@ -153,7 +153,7 @@ void initRuleTable(int* ruleTable)
 
     // rule 2:
     // (make a node)
-    vector<int> temp = {2, 3, 4, 6, 7, 8, 10, 11, 12, 14, 15, 16, 18,
+    vector<int> temp = {2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18,
                         19, 20, 22, 23, 24, 26, 27, 28, 30, 31};
     addToTable(&temp, ruleTable, 2);
 
@@ -172,14 +172,13 @@ void initRuleTable(int* ruleTable)
 
     // rule 5:
     // (Make a node, close line of NW pixel)
-    temp = {64, 74, 75, 78, 79, 82, 83, 84, 86, 87, 88, 90, 91, 92,
+    temp = {64, 66, 67, 70, 71, 72, 74, 75, 76, 78, 79, 82, 83, 84, 86, 87, 88, 90, 91, 92,
             94, 95};
     addToTable(&temp, ruleTable, 5);
 
     // rule 6:
     // (Make a node, close line of N pixel)
-    // HIER FILTERN: alle die SHARE brauchen.
-    temp = {128, 129, 131, 135, 138, 139, 142, 143, 146, 147, 148,
+    temp = {128, 129, 131, 135, 138, 139, 142, 143, 144, 146, 147, 148,
             149, 150, 151, 154, 155, 158, 159, 192, 193, 195, 199,
             202, 203, 206, 207, 210, 211, 212, 213, 214, 215, 218,
             219, 222, 223, 200};
@@ -189,7 +188,7 @@ void initRuleTable(int* ruleTable)
     // ------------ extend rules --------------
     // rule 7:
     // (Extend line of NE pixel)
-    temp = {5, 9, 13, 17, 25, 29};
+    temp = {5, 17, 25, 29};
     addToTable(&temp, ruleTable, 7);
 
     // rule 8:
@@ -200,12 +199,12 @@ void initRuleTable(int* ruleTable)
 
     // rule 9:
     // (Extend line of NW pixel)
-    temp = {66, 67, 68, 70, 71, 72, 76, 80};
+    temp = {68, 80};
     addToTable(&temp, ruleTable, 9);
 
     // rule 10:
     // (Extend line of N pixel)
-    temp = {130, 132, 133, 134, 136, 137, 140, 141, 144, 145, 152,
+    temp = {130, 132, 133, 134, 136, 137, 140, 141, 145, 152,
             153, 156, 157, 194, 196, 197, 198, 200, 201, 204, 205,
             208, 209, 216, 217, 220, 221};
     addToTable(&temp, ruleTable, 10);
@@ -280,11 +279,25 @@ void rule16_closeMultW_N(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel
 
         if(west != west->line->getStart())
             west->isNode = false;
+
+        rule2_makeNode(lines, cur);
     }
 
     // normal vertical line, closeMult as usual
     else
     {
+        // junction case in which west didn't have a line
+        if(west->line == NULL)
+        {
+            rule2_makeNode(lines, west);
+        }
+
+        // junction case in which north didn't have a line
+        if(north->line == NULL)
+        {
+            rule2_makeNode(lines, north);
+        }
+
         west->line->setEnd(west);
         north->line->setEnd(north);
 
@@ -323,8 +336,8 @@ void rule14_closeMultW_NE(set<vectorLine*>* lines, pixel* cur, pixel* west, pixe
     west->isNode = true;
     west->line->setEnd(west);
 
-    northEast->isNode = true;
-    northEast->line->setEnd(northEast);
+    //northEast->isNode = true;
+    //northEast->line->setEnd(northEast);
 
     rule2_makeNode(lines, cur);
 }
@@ -336,10 +349,12 @@ void rule13_connectW_N(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel* 
     if(northEast->line != NULL)
     {
         cur->isNode = true;
-        west->line->setEnd(cur);
+        west->line->setEnd(west);
 
         if(west != west->line->getStart())
             west->isNode = false;
+
+        rule2_makeNode(lines, cur);
     }
 
     // north is normal pixel
@@ -421,7 +436,6 @@ void rule10_extendN(set<vectorLine*>* lines, pixel* cur, pixel* north, pixel* no
 
 void rule9_extendNW(pixel* cur, pixel* northWest)
 {
-    // 66, 67, 70, 71, 72, 76,  nicht eher closeNW?
     cur->isNode = true;
     northWest->line->setEnd(cur);
     cur->line = northWest->line;
@@ -461,15 +475,11 @@ void rule8_extendW(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel* nort
 
 void rule7_extendNE(pixel* cur, pixel* northEast)
 {
-    // set current point as new ending point
+    // set current point as new start point
     cur->isNode = true;
-    northEast->line->setEnd(cur);
+    northEast->line->setStart(cur);
     cur->line = northEast->line;
-
-    // if northEast isn't the first point
-    // in the line, revoke its node status
-    if(northEast != northEast->line->getStart())
-        northEast->isNode = false;
+    northEast->isNode = false;
 }
 
 void rule6_closeN(set<vectorLine*>* lines, pixel* cur, pixel* north, pixel* northWest, pixel* northEast)
@@ -502,22 +512,20 @@ void rule5_closeNW(set<vectorLine*>* lines, pixel* cur, pixel* northWest)
 
 void rule4_closeW(set<vectorLine*>* lines, pixel* cur, pixel* west)
 {
-    west->isNode = false;
+    west->isNode = true;
     cur->isNode = true;
-    west->line->setEnd(west);
 
     rule2_makeNode(lines, cur);
 }
 
 void rule3_closeNE(set<vectorLine*>* lines, pixel* cur, pixel* northEast)
 {
-    // Close rules: set to neighbor, NOT to cur,
-    // to avoid issues with rule2_makeNode - temp nodes
-    // should disappear in postprocessing anyway
+    // lines "comes" from the right
+    // so set start instead of end
     northEast->isNode = true;
-    northEast->line->setEnd(northEast);
+    northEast->line->setStart(cur);
 
-    rule2_makeNode(lines, cur);
+    //rule2_makeNode(lines, cur);
 }
 
 
@@ -746,18 +754,6 @@ void applyRule(Mat* image, pixel* cur, uint8_t nBits, int* ruleTable, set<vector
     }
 }
 
-// Initialize all pixels with their coordinates
-// in the picture.
-void initPixels(vector<pixel*>* pixels, Mat* image)
-{
-    for(int i = 0; i < image->rows; i++)
-    {
-        for(int j = 0; j < image->cols; j++)
-        {
-            pixels->at(i * image->cols + j) = new pixel(Vec2i(i, j), NULL, false);
-        }
-    }
-}
 
 // debug function: outputs binary encoding
 // of a neighborhood state as an image.
@@ -866,7 +862,7 @@ void stateToImage (Mat image, int nbh)
 // Also contains additional postprocessing of the vectors by means of
 // the Douglas-Pecker-Rahmer algorithm for simplifying lines and
 // restoring topology.
-map<pixel*, vectorLine*> mooreVector(Mat image)
+map<pixel*, vectorLine*> mooreVector(Mat image, vector<pixel*>* pixels, pixel* dummy)
 {
     /*Mat test = Mat(300, 300, CV_8UC1);
     cvtColor(test, test, CV_GRAY2BGR);
@@ -880,11 +876,8 @@ map<pixel*, vectorLine*> mooreVector(Mat image)
     waitKey(0);*/
 
     int ruleTable[256]; // links each neighborhood encoding to a rule
-    vector<pixel*>* pixels = new vector<pixel*>((image.rows + 2) * (image.cols + 2)); // states of all pixels (+ dummy values for 1px border)
-    pixel* dummy = new pixel(Vec2i(-1, -1), NULL, false);
-
     initRuleTable(ruleTable);
-    initPixels(pixels, &image);
+
 
     set<vectorLine*> lines; // all found vector lines
 
