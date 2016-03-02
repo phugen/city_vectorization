@@ -23,11 +23,11 @@ using namespace cv;
 
 int main (int argc, char** argv)
 {
-    Mat original, *output;
+    Mat original, process, output;
     vector<ConnectedComponent> components;
 
-    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer_2.png", CV_LOAD_IMAGE_COLOR);
-    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/vectortest.png", CV_LOAD_IMAGE_COLOR);
+    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer.png", CV_LOAD_IMAGE_COLOR);
+    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/vectortest.png", CV_LOAD_IMAGE_COLOR);
     //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_mittel.png", CV_LOAD_IMAGE_COLOR);
 
 
@@ -37,10 +37,11 @@ int main (int argc, char** argv)
         return -1;
     }
 
-    output = new Mat(original.rows, original.cols, CV_8U); // output matrix
-    vector<Point2i> corners;
-    vector<Vec2i> vcorners;
+    // --
+    process = original.clone();
+    output = Mat(original.rows, original.cols, CV_8U); // output matrix
 
+    cout << original.depth() << " " << original.channels() << "\n";
 
     // BGR format
     // Thresholds need testing with unscaled images to avoid
@@ -49,11 +50,11 @@ int main (int argc, char** argv)
     // TODO: Slider adjustment for black layer
     Vec3b thresholds = Vec3b(180, 180, 180);
 
-    getBlackLayer(thresholds, original, output);
-    unionFindComponents(output, &components, 10); // size: 10
-    areaFilter(&components, 10);
-    collinearGrouping(*output, output, &components);
-    vectorizeImage(output, "vectorized");
+    getBlackLayer(thresholds, process, &output);
+    //unionFindComponents(&output, &components, 10); // size: 10
+    //areaFilter(&components, 10);
+    //collinearGrouping(output, &output, &components);
+    vectorizeImage(&output, &original, "vectorized", 0);
 
     waitKey(0);
 }

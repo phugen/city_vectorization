@@ -28,7 +28,8 @@ SOURCES += \
     src/vectorization/moore.cpp \
     src/vectorization/vectorize.cpp \
     src/vectorization/vectorline.cpp \
-    src/vectorization/zhangsuen.cpp
+    src/vectorization/zhangsuen.cpp \
+    src/vectorization/douglaspeucker.cpp
 
 HEADERS += \
     include/opencvincludes.hpp \
@@ -200,7 +201,8 @@ HEADERS += \
     include/vectorization/moore.hpp \
     include/vectorization/vectorize.hpp \
     include/vectorization/vectorline.hpp \
-    include/vectorization/zhangsuen.hpp
+    include/vectorization/zhangsuen.hpp \
+    include/vectorization/douglaspeucker.h
 
 INCLUDEPATH += "C:/opencv/build/include"
 

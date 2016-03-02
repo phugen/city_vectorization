@@ -477,7 +477,7 @@ void rule7_extendNE(pixel* cur, pixel* northEast)
 {
     // set current point as new start point
     cur->isNode = true;
-    northEast->line->setStart(cur);
+    northEast->line->setEnd(cur);
     cur->line = northEast->line;
     northEast->isNode = false;
 }
@@ -524,6 +524,7 @@ void rule3_closeNE(set<vectorLine*>* lines, pixel* cur, pixel* northEast)
     // so set start instead of end
     northEast->isNode = true;
     northEast->line->setStart(cur);
+    cur->line = northEast->line;
 
     //rule2_makeNode(lines, cur);
 }
@@ -603,6 +604,9 @@ void applyRule(Mat* image, pixel* cur, uint8_t nBits, int* ruleTable, set<vector
 
     Vec2i coord = cur->coord;
 
+    if(coord == Vec2i(6, 9))
+        cout << "" ;
+
     pixel* northEast = dummy;
     pixel* north = dummy;
     pixel* northWest = dummy;
@@ -634,7 +638,7 @@ void applyRule(Mat* image, pixel* cur, uint8_t nBits, int* ruleTable, set<vector
         {
             // make a node
             // and set end point of NE pixel line to node:
-            // Here, one node is both the ending point an starting point
+            // Here, one node is both the ending point and starting point
             // of two lines respectively.
             rule3_closeNE(lines, cur, northEast);
             break;
@@ -862,7 +866,7 @@ void stateToImage (Mat image, int nbh)
 // Also contains additional postprocessing of the vectors by means of
 // the Douglas-Pecker-Rahmer algorithm for simplifying lines and
 // restoring topology.
-map<pixel*, vectorLine*> mooreVector(Mat image, vector<pixel*>* pixels, pixel* dummy)
+multimap<pixel*, vectorLine*> mooreVector(Mat image, vector<pixel*>* pixels, pixel* dummy)
 {
     /*Mat test = Mat(300, 300, CV_8UC1);
     cvtColor(test, test, CV_GRAY2BGR);
@@ -904,7 +908,6 @@ map<pixel*, vectorLine*> mooreVector(Mat image, vector<pixel*>* pixels, pixel* d
         }
     }
 
-    delete dummy;
 
     // close dangling lines by setting endpoint to startpoint
     for(auto l = lines.begin(); l != lines.end(); l++)
@@ -915,8 +918,8 @@ map<pixel*, vectorLine*> mooreVector(Mat image, vector<pixel*>* pixels, pixel* d
         }
     }
 
-    // build node->line mapping
-    map<pixel*, vectorLine*> nodeToLine;
+    // build end node->line mapping
+    multimap<pixel*, vectorLine*> nodeToLine;
 
     for(auto l = lines.begin(); l != lines.end(); l++)
     {

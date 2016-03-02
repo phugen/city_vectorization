@@ -13,4 +13,4 @@ void initPixels(std::vector<vectorLine*>* pixels, cv::Mat* image);
 void applyRule(cv::Mat* image, pixel* cur, uint8_t nBits, int* ruleTable,
                std::set<vectorLine*>* lines, std::vector<pixel *> *pixels);
 
-std::map<pixel*, vectorLine*> mooreVector(cv::Mat image, std::vector<pixel*>* pixels, pixel* dummy);
+std::multimap<pixel*, vectorLine*> mooreVector(cv::Mat image, std::vector<pixel*>* pixels, pixel* dummy);

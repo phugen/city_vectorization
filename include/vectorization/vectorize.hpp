@@ -9,6 +9,6 @@
 
 struct vec2i_compare;
 
-void vectorizeImage (cv::Mat* image, std::string filename);
-std::vector<std::vector<vectorLine *> > refineVectors(cv::Mat *image, std::map<pixel*, vectorLine*>* nodeToLine, std::vector<pixel *> *pixels);
-void vectorsToFile (cv::Mat *image, std::set<vectorLine*> refinedLines, std::string filename);
+void vectorizeImage (cv::Mat *blacklayer, cv::Mat *original_image, std::string filename, double epsilon);
+std::vector<std::vector<pixel*>> refineVectors(cv::Mat *image, std::map<pixel*, vectorLine*>* nodeToLine, std::vector<pixel *> *pixels, double epsilon);
+void vectorsToFile (cv::Mat *image, std::vector<std::vector<pixel*>> paths, std::string filename);
