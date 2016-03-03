@@ -12,9 +12,11 @@
 #include "include/text_segmentation/collineargrouping.hpp"
 #include "include/vectorization/zhangsuen.hpp"
 #include "include/vectorization/vectorize.hpp"
+#include "include/vectorization/iterative_linematching.hpp"
 
 #include <iostream>
 #include <algorithm>
+#include <time.h>
 
 
 using namespace std;
@@ -23,13 +25,14 @@ using namespace cv;
 
 int main (int argc, char** argv)
 {
+    int start_time = time(NULL);
+
+
     Mat original, process, output;
     vector<ConnectedComponent> components;
 
-    original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_schwer.png", CV_LOAD_IMAGE_COLOR);
-    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/vectortest.png", CV_LOAD_IMAGE_COLOR);
-    //original = imread("C:/Users/shk/Desktop/qtProj/cityplan_vectorization/CV_sample_mittel.png", CV_LOAD_IMAGE_COLOR);
-
+    // load image here
+    //original = ;
 
     if(!original.data)
     {
@@ -54,7 +57,15 @@ int main (int argc, char** argv)
     //unionFindComponents(&output, &components, 10); // size: 10
     //areaFilter(&components, 10);
     //collinearGrouping(output, &output, &components);
-    vectorizeImage(&output, &original, "vectorized", 0);
+    vectorizeImage(&output, &original, "vectorized", 2);
+
+    /*char* source_window = "Image";
+    vector<Vec4i> finalLineCollection;
+    getFinalLines(&output, &finalLineCollection, source_window);*/
+
+
+    int end_time = time(NULL);
+    printf ("\n\nVectorizing this file took %d second(s)!\n", (end_time - start_time));
 
     waitKey(0);
 }

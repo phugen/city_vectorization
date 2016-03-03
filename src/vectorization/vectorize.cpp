@@ -19,9 +19,47 @@
 using namespace std;
 using namespace cv;
 
+// TODO: OBJECT pixels only!
+//
+// Determine an approximate line width by
+// dividing the amount of black pixels in
+// the window in the black layer image by
+// the amount in the window in the thinned image
+double localLineWidth (Vec2i coord, int windowSize, Mat* blacklayer, Mat* thinned)
+{
+    // set window boundaries
+    int i_from = coord[0] - windowSize;
+    int j_from = coord[1] - windowSize;
+
+    int i_to = coord[0] + windowSize;
+    int j_to = coord[1] + windowSize;
+
+    i_from < 0 ? i_from = 0 : i_from = i_from;
+    j_from < 0 ? j_from = 0 : j_from = j_from;
+
+    i_to > blacklayer->rows - 1 ? i_to = blacklayer->rows - 1 : i_to = i_to;
+    j_to > blacklayer->cols - 1 ? j_to = blacklayer->cols - 1 : j_to = j_to;
+
+    int amount_blacklayer = 0;
+    int amount_thinned = 0;
+
+    // count number of pixels in window
+    for(int i = i_from; i <= i_to; i++ )
+    {
+        for(int j = j_from; j <= j_to; j++)
+        {
+            if(blacklayer->at<uchar>(i, j) == 0) amount_blacklayer++;
+            if(thinned->at<uchar>(i, j) == 0) amount_thinned++;
+        }
+    }
+
+    double localWidth = amount_blacklayer / amount_thinned;
+    return localWidth;
+}
 
 // Create a .svg file "filename.svg" based on the extracted vector lines.
-void vectorsToFile (Mat* thinned, Mat* original_image, vector<vector<pixel*>> paths, string filename)
+void vectorsToFile (Mat* blacklayer, Mat* thinned, Mat* original_image,
+                    vector<vector<pixel*>> paths, vector<colorPoly> colorpolys, string filename)
 {
     namedWindow("before", WINDOW_NORMAL);
     imshow("before", *thinned);
@@ -53,37 +91,33 @@ void vectorsToFile (Mat* thinned, Mat* original_image, vector<vector<pixel*>> pa
     cairo_t *cr;
     surface = cairo_svg_surface_create((filename + ".svg").c_str(), thinned->cols, thinned->rows);
     cr = cairo_create(surface);
-    cairo_set_source_rgb(cr, 0, 0, 0); // set background color
+    cairo_set_source_rgb(cr, 0, 0, 0); // set color
     cairo_set_line_width(cr, 1); // set line width
     cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE); // don't smoothen line ends
+    cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND); // smooth line intersections
 
-    // do a rough coloring for presentation purposes
-    for(int i = 0; i < original_image->rows; i++)
-        for(int j = 0; j < original_image->cols; j++)
+    // draw color polygons
+    for(auto colorpoly = colorpolys.begin(); colorpoly != colorpolys.end(); colorpoly++)
+    {
+        // draw colored outlines
+        for(auto pt = (*colorpoly).points.begin(); pt != (*colorpoly).points.end(); pt++)
         {
-            if( (i % 5) == 0 && (j % 5) == 0)
-            {
-                Vec3b pxclr = original_image->at<Vec3b>(i, j);
-
-                // cairo needs floats in [0, 1]
-                float red = pxclr[2];
-                red /= 255;
-
-                float green = pxclr[1];
-                green /= 255;
-
-                float blue = pxclr[0];
-                blue /= 255;
-
-                // pick (interpolated?) color from original image pixel
-                // and color background with vector rectangles
-
-                cairo_set_source_rgb (cr, red, green, blue);
-                cout << pxclr << "\n";
-                cairo_rectangle(cr, j-0.5, i-0.5, 1, 1);
-                cairo_fill (cr);
-            }
+            Point current = *pt;
+            cairo_line_to(cr, current.x, current.y);
         }
+
+        cairo_close_path(cr);
+
+        // set polygon color
+        float r = ((float) (*colorpoly).color[2]) / 255.;
+        float g = ((float) (*colorpoly).color[1]) / 255.;
+        float b = ((float) (*colorpoly).color[0]) / 255.;
+
+        cairo_set_source_rgb (cr, r, g, b);
+
+        // fill polygon
+        cairo_fill(cr);
+    }
 
     // reset color to black
     cairo_set_source_rgb (cr, 0, 0, 0);
@@ -114,9 +148,21 @@ void vectorsToFile (Mat* thinned, Mat* original_image, vector<vector<pixel*>> pa
             // draw normal line
             else
             {
+                // calculate local line width for both line endpoints
+                // and take mean as line width for entire line
+                double loc1 = localLineWidth(start->coord, 10, blacklayer, thinned);
+                double loc2 = localLineWidth(start->coord, 10, blacklayer, thinned);
+                double meanloc = (loc1 + loc2) / 2;
+
+                // set new linewidth
+                cairo_set_line_width (cr, meanloc);
+
                 cairo_move_to(cr, start->coord[1], start->coord[0]);
                 cairo_line_to(cr, end->coord[1], end->coord[0]);
                 cairo_stroke(cr);
+
+                // reset
+                cairo_set_line_width (cr, 1.);
             }
         }
     }
@@ -301,7 +347,13 @@ void fuseNodes(Mat image, vector<pixel*> pixels, multimap<pixel*, vectorLine*>* 
                 for(auto px = toCheck.begin(); px != toCheck.end(); px++)
                 {
                     if(nodeToLine->find(*px) != nodeToLine->end())
-                        nodes.push_back(*px);
+                    {
+                        // don't find own nodes
+                        if((*px)->line != line)
+                        {
+                            nodes.push_back(*px);
+                        }
+                    }
                 }
 
                 // coordinates for predecessor coordinates
@@ -321,27 +373,52 @@ void fuseNodes(Mat image, vector<pixel*> pixels, multimap<pixel*, vectorLine*>* 
                 // predecessor node
                 if(nodes.size() == 1)
                 {
+                    // found node is endpoint of own line
+                    if(nodes.at(0)->line == current->line)
+                    {
+                        // do nothing
+                    }
+
                     // current is a start node
-                    if(current == current->line->getStart())
+                    else if(current == current->line->getStart())
                     {
                         // update mapping
                         if(line->getStart() != line->getEnd()) // respect 1px lines
+                        {
                             nodeToLine->erase(line->getStart());
+                            current->line->setStart(nodes.at(0));
+                        }
 
                         nodeToLine->insert(make_pair(nodes.at(0), line));
-
-                        // set new start
-                        current->line->setStart(nodes.at(0));
+                        line->setStart(nodes.at(0));
                     }
 
                     // current is an end node
                     else if(current == current->line->getEnd())
                     {
-                        if(line->getStart() != line->getEnd())
-                            nodeToLine->erase(nodes.at(0));
+                        // found node is endpoint of own line
+                        /*if(nodes.at(0)->line == current->line)
+                        {
+                            // do nothing
+                        }*/
 
-                        nodeToLine->insert(make_pair(current, (nodes.at(0))->line));
-                        nodes.at(0)->line->setEnd(current);
+                        if(nodes.at(0) == nodes.at(0)->line->getStart())
+                        {
+                            if(line->getStart() != line->getEnd())
+                                nodeToLine->erase(current);
+
+                            nodeToLine->insert(make_pair(nodes.at(0), (nodes.at(0))->line));
+                            line->setEnd(nodes.at(0));
+                        }
+
+                        else
+                        {
+                            if(line->getStart() != line->getEnd())
+                                nodeToLine->erase(nodes.at(0));
+
+                            nodeToLine->insert(make_pair(current, (nodes.at(0))->line));
+                            nodes.at(0)->line->setEnd(current);
+                        }
                     }
                 }
 
@@ -393,12 +470,40 @@ void fuseNodes(Mat image, vector<pixel*> pixels, multimap<pixel*, vectorLine*>* 
                     else if(first->coord == Vec2i(i_n, j_n) &&
                             second->coord == Vec2i(i_w, j_w))
                     {
+                        if(pixels.at((i_ne * width) + j_ne)->line == NULL)
+                        {
+                            nodeToLine->erase(first->line->getEnd());
+                            nodeToLine->erase(second->line->getEnd());
+                            nodeToLine->insert(make_pair(current, first->line));
+                            nodeToLine->insert(make_pair(current, second->line));
+
+                            first->line->setEnd(current);
+                            second->line->setEnd(current);
+                        }
+
+                        else
+                        {
+                            nodeToLine->erase(first->line->getStart());
+                            nodeToLine->erase(second->line->getEnd());
+                            nodeToLine->insert(make_pair(current, first->line));
+                            nodeToLine->insert(make_pair(current, second->line));
+
+                            first->line->setStart(current);
+                            second->line->setEnd(current);
+                        }
+
+                    }
+
+                    // pred nodes are NE and W
+                    else if(first->coord == Vec2i(i_ne, j_ne) &&
+                            second->coord == Vec2i(i_w, j_w))
+                    {
                         nodeToLine->erase(first->line->getStart());
                         nodeToLine->erase(second->line->getEnd());
                         nodeToLine->insert(make_pair(current, first->line));
                         nodeToLine->insert(make_pair(current, second->line));
 
-                        first->line->setStart(current);
+                        first->line->setEnd(current);
                         second->line->setEnd(current);
                     }
 
@@ -477,6 +582,8 @@ vector<vector<pixel*>> refineVectors (Mat* image, multimap<pixel*, vectorLine*>*
         // add sub paths to list of globally found paths
         for(auto path = subPaths.begin(); path != subPaths.end(); path++)
             allPaths.push_back(*path);
+
+        cout << lines.size() << "\n";
     }
 
     // Extract individual nodes of each path for use in
@@ -498,10 +605,15 @@ vector<vector<pixel*>> refineVectors (Mat* image, multimap<pixel*, vectorLine*>*
         pathsAsNodes.push_back(pathNodes);
     }
 
-    // simplify paths via Douglas-Peucker algorithm
+    int i = 0;
     for(auto path = pathsAsNodes.begin(); path != pathsAsNodes.end(); path++)
     {
+        if(i % 100 == 0)
+            cout << i * 100 << " lines refined\n";
+
         *path = douglasPeucker(*path, epsilon);
+        i++;
+
     }
 
     delete dummy;
@@ -509,6 +621,135 @@ vector<vector<pixel*>> refineVectors (Mat* image, multimap<pixel*, vectorLine*>*
     // delete original lines?
 
     return pathsAsNodes;
+}
+
+
+
+// Attempts to perform a color segmentation
+// to identify regions of the same color which
+// can then be converted to filled vector polygons.
+vector<colorPoly> recoverTopology(Mat* original_image)
+{
+    Mat meanShiftResult;
+    Mat erodeResult(original_image->size(), original_image->type());
+
+    // erode image to improve color quantization results.
+    erode(*original_image, erodeResult, Mat());
+
+    // strip image of black pixels
+    Mat blackmask, masked;
+    blackmask = erodeResult.clone();
+    masked = erodeResult.clone();
+    inRange(erodeResult, 0, 50, blackmask);
+    cvtColor(blackmask, blackmask, CV_GRAY2BGR);
+
+    // delete black pixels from image
+    for(int i = 0; i < erodeResult.rows; i++)
+        for(int j = 0; j < erodeResult.cols; j++)
+        {
+            if(blackmask.at<Vec3b>(i, j) == Vec3b(255, 255, 255))
+                erodeResult.at<Vec3b>(i, j) = Vec3b(255, 255, 255);
+        }
+
+    // mean shift filter
+    pyrMeanShiftFiltering(erodeResult, meanShiftResult, 30, 30, 5);
+
+    // remove black artifacts by mean shift filtering again
+    pyrMeanShiftFiltering(meanShiftResult, meanShiftResult, 30, 30, 3);
+
+    namedWindow("second_meanshift", WINDOW_NORMAL);
+    imshow("second_meanshift", meanShiftResult);
+    imwrite("second_meanshift.png", meanShiftResult);
+
+    // convert to HSV
+    Mat meanShiftHSV;
+    cvtColor(meanShiftResult, meanShiftHSV, CV_BGR2HSV);
+
+    // split channels and obtain hue channel
+    vector<Mat> channels;
+    split(meanShiftHSV, channels);
+    Mat hueChannel = channels[1];
+
+    imwrite("meanshift_H.png", hueChannel);
+
+    // shift color space to get rid of hue channel artifacts
+    Mat hueChannel_shifted = hueChannel.clone();/*
+    int shift = 25; // in openCV hue values go from 0 to 180 (so have to be doubled to get to 0 .. 360) because of byte range from 0 to 255
+
+    for(int i = 0; i < hueChannel_shifted.rows; ++i)
+    {
+        for(int j = 0; j < hueChannel_shifted.cols; ++j)
+        {
+            hueChannel_shifted.at<uchar>(i,j) = (hueChannel_shifted.at<uchar>(i,j) + shift) % 180;
+        }
+    }
+
+    imwrite("meanshift_H_shifted.png", hueChannel_shifted);*/
+
+
+    // edge detection on hue channel
+    Mat blurred;
+    blur(hueChannel_shifted, blurred, Size(3,3) ); // Gaussian blur for noise reduction
+
+    Mat edges;
+    Canny(blurred, edges, 100, 50);
+
+    Mat contourMat = edges.clone();
+    cvtColor(edges, contourMat, CV_GRAY2BGR);
+
+    namedWindow("shift_canny", WINDOW_NORMAL);
+    imshow("shift_canny", edges);
+    imwrite("canny.png", edges);
+
+    // get contours
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchyH;
+    findContours(edges, contours, hierarchyH, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+
+    vector<colorPoly> colorpolys;
+    for(int i = 0; i < (int) contours.size(); i++) // all contours
+    {
+        //only take inner outlines
+        // even of nested components (i.e. odd level)
+        //if(hierarchyH[i][3] > -1)
+        {
+            // determine polygon fill color
+            Mat mask = Mat::zeros(meanShiftResult.rows, meanShiftResult.cols, CV_8U);
+
+            const Point* start = &(contours[i][0]);
+            const int numberpts = (int) contours[i].size();
+            const Scalar color = Scalar(255);
+
+            //bitwise_not(mask, mask);
+            fillPoly(mask, &start, &numberpts, 1, color);
+
+            namedWindow("MASK", WINDOW_NORMAL);
+            imshow("MASK", mask);
+
+            // Compute the color in polygon area using polygon mask
+            Scalar polycolor = mean(meanShiftResult, mask);
+
+            colorPoly poly;
+            poly.points = contours[i];
+            poly.color = polycolor;
+
+            colorpolys.push_back(poly);
+
+
+            for(int z = 0; z < (int) contours[i].size()-1; z++)
+            {
+                line(contourMat, contours[i][z], contours[i][z+1], Scalar(0, 255, 0));
+            }
+
+            line(contourMat, contours[i][contours[i].size()-1], contours[i][0], Scalar(0, 255, 0));
+        }
+
+    }
+
+    namedWindow("contours", WINDOW_NORMAL);
+    imshow("contours", contourMat);
+
+    return colorpolys;
 }
 
 
@@ -532,38 +773,39 @@ void vectorizeImage (Mat* blacklayer, Mat* original_image, string filename, doub
     cout << "Starting vectorization ...\n";
 
     multimap<pixel*, vectorLine*> nodeToLine; // provides a endpoint->line mapping
-    vector<vector<pixel*>> refinedPaths; // holds results of douglas-peucker algorithm
 
     vector<pixel*>* pixels = new vector<pixel*>((blacklayer->rows + 2) * (blacklayer->cols + 2)); // states of all pixels (+ dummy values for 1px border)
     pixel* dummy = new pixel(Vec2i(-1, -1), NULL, false);
     initPixels(pixels, blacklayer);
 
-    Mat inverted = Mat(blacklayer->rows, blacklayer->cols, blacklayer->type());
-    Mat thinned = Mat(blacklayer->rows, blacklayer->cols, blacklayer->type());
+    Mat* inverted = new Mat(blacklayer->rows, blacklayer->cols, blacklayer->type());
+    Mat* thinned = new Mat(blacklayer->rows, blacklayer->cols, blacklayer->type());
 
     // thin image using Zhang-Suen
     cout << "Extracting image skeleton... \n";
-    bitwise_not(*blacklayer, inverted);
-    thinning(inverted);
-    bitwise_not(inverted, thinned);
+    bitwise_not(*blacklayer, *inverted);
+    thinning(*inverted);
+    bitwise_not(*inverted, *thinned);
 
-    imwrite("thinned.png", thinned);
+    //imwrite("thinned.png", thinned);
 
     // create vector lines
     cout << "Extracting vectors from raster image... \n";
-    nodeToLine = mooreVector(thinned, pixels, dummy);
+    nodeToLine = mooreVector(*thinned, pixels, dummy);
 
     // refine vectors by removing unnecessary nodes
     cout << "Refining vector data... \n";
+    vector<vector<pixel*>> refinedPaths; // holds results of douglas-peucker algorithm
     refinedPaths = refineVectors(blacklayer, &nodeToLine, pixels, epsilon);
 
-    // recover image topology and add color
     cout << "Recovering image topology... \n";
-    // recoverTopology(lines);
+    // Determine color polygons
+    vector<colorPoly> colorpolys;
+    //colorpolys = recoverTopology(original_image);
 
     // write vector lines to file
     cout << "Writing vector data to file << " << filename << ".svg...\n";
-    vectorsToFile(&thinned, original_image, refinedPaths, filename);
+    vectorsToFile(blacklayer, thinned, original_image, refinedPaths, colorpolys, filename);
 
     // delete allocated line objects
     cout << "Cleaning up... \n";

@@ -268,7 +268,7 @@ void getBlackLayer(Vec3b thresholds, Mat input, Mat* output)
 
     namedWindow("black layer", CV_WINDOW_NORMAL);
     imshow("black layer", *output);
-    //imwrite("BLACK.png", *output );
+    imwrite("BLACK.png", *output );
 }
 
 

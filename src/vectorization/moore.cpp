@@ -423,8 +423,6 @@ void rule10_extendN(set<vectorLine*>* lines, pixel* cur, pixel* north, pixel* no
     // no special case - just add cur to north line
     else
     {
-        // don't push end point! - needed for connectW_N
-        //???
         cur->isNode = true;
         north->line->setEnd(cur);
         cur->line = north->line;
@@ -473,13 +471,11 @@ void rule8_extendW(set<vectorLine*>* lines, pixel* cur, pixel* west, pixel* nort
     }
 }
 
-void rule7_extendNE(pixel* cur, pixel* northEast)
+void rule7_extendNE(set<vectorLine*>* lines, pixel* cur, pixel* northEast)
 {
     // set current point as new start point
     cur->isNode = true;
-    northEast->line->setEnd(cur);
-    cur->line = northEast->line;
-    northEast->isNode = false;
+    rule2_makeNode(lines, cur);
 }
 
 void rule6_closeN(set<vectorLine*>* lines, pixel* cur, pixel* north, pixel* northWest, pixel* northEast)
@@ -672,7 +668,7 @@ void applyRule(Mat* image, pixel* cur, uint8_t nBits, int* ruleTable, set<vector
         {
             // Extend line of NE pixel: No local extreme, so the previous
             // line simply continues.
-            rule7_extendNE(cur, northEast);
+            rule7_extendNE(lines, cur, northEast);
             break;
         }
 

@@ -326,4 +326,6 @@ void unionFindComponents(Mat* input, vector<ConnectedComponent>* components, int
     // show result
     namedWindow("Components", CV_WINDOW_NORMAL);
     imshow("Components", showMBR);
+
+    //imwrite("Components.png", showMBR);
 }

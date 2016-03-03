@@ -435,8 +435,12 @@ void collinearGrouping (Mat input, Mat* output, vector<ConnectedComponent>* comp
     namedWindow("CENTROIDS", CV_WINDOW_NORMAL);
     imshow("CENTROIDS", hough_UC);
 
+    //imwrite("Centroids.png", hough_UC);
+
     // show result
     imshow("WITHOUT TEXT", erased);
+
+    //imwrite("without_text.png", erased);
 
     *output = erased;
 

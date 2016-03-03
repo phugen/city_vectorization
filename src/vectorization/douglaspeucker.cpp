@@ -39,20 +39,9 @@ vector<pixel*> douglasPeucker (vector<pixel*> path, double epsilon)
         vector<pixel*> left = douglasPeucker(vector<pixel*>(path.begin(), path.begin() + (index+1)), epsilon);
         vector<pixel*> right = douglasPeucker(vector<pixel*>(path.begin() + index, path.end()), epsilon);
 
-        // conquer: merge sublists
-
-        // choose larger vector to insert - should be faster because of reallocs
-        if(left.size() >= right.size())
-        {
-            left.insert(left.end(), right.begin(), right.end());
-            simplifiedPath = left;
-        }
-
-        else
-        {
-            right.insert(right.end(), left.begin(), left.end());
-            simplifiedPath = right;
-        }
+        // conquer: merge sublists        
+        left.insert(left.end(), right.begin(), right.end());
+        simplifiedPath = left;
     }
 
     // remove all inner nodes since they are not
