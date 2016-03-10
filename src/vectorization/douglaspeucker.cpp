@@ -1,3 +1,10 @@
+/**
+  * Implements the Ramer-Douglas-Peucker for simplifying
+  * curves.
+  *
+  * Author: Phugen
+  */
+
 #include "include/vectorization/douglaspeucker.h"
 #include "include/text_segmentation/auxiliary.hpp"
 

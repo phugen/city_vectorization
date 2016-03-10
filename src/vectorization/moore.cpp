@@ -1,3 +1,10 @@
+/**
+  * Implementation of L. Moore's vectorization
+  * algorithm.
+  *
+  * Author: Phugen
+  */
+
 #include "include/vectorization/vectorize.hpp"
 
 #include <map>

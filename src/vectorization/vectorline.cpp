@@ -1,3 +1,10 @@
+/**
+  * Represents a line segment found by
+  * Moore's algorithm (moore.cpp).
+  *
+  * Author: Phugen
+  */
+
 #include "include/vectorization/vectorline.hpp"
 #include <iostream>
 

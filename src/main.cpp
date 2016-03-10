@@ -32,7 +32,7 @@ int main (int argc, char** argv)
     vector<ConnectedComponent> components;
 
     // load image here
-    //original = ;
+    original = imread("../../cityplan_vectorization/presentation_IMAGE.png");
 
     if(!original.data)
     {
@@ -40,29 +40,20 @@ int main (int argc, char** argv)
         return -1;
     }
 
-    // --
     process = original.clone();
     output = Mat(original.rows, original.cols, CV_8U); // output matrix
 
     cout << original.depth() << " " << original.channels() << "\n";
 
-    // BGR format
-    // Thresholds need testing with unscaled images to avoid
-    // artifacts artificially increasing the needed threshold
-    //
-    // TODO: Slider adjustment for black layer
+
+    // TODO: Automatically choosing reasonable threshold?
     Vec3b thresholds = Vec3b(180, 180, 180);
 
-    getBlackLayer(thresholds, process, &output);
-    //unionFindComponents(&output, &components, 10); // size: 10
-    //areaFilter(&components, 10);
-    //collinearGrouping(output, &output, &components);
-    vectorizeImage(&output, &original, "vectorized", 2);
-
-    /*char* source_window = "Image";
-    vector<Vec4i> finalLineCollection;
-    getFinalLines(&output, &finalLineCollection, source_window);*/
-
+    getBlackLayer(thresholds, process, &output); // black layer creation
+    unionFindComponents(&output, &components, 10); // MBR detection
+    areaFilter(&components, 10); // ratio component filtering
+    collinearGrouping(output, &output, &components); // text removal
+    vectorizeImage(&output, &original, "vectorized", 2); // vectorization of image
 
     int end_time = time(NULL);
     printf ("\n\nVectorizing this file took %d second(s)!\n", (end_time - start_time));

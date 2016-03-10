@@ -29,12 +29,12 @@ SOURCES += \
     src/vectorization/vectorize.cpp \
     src/vectorization/vectorline.cpp \
     src/vectorization/zhangsuen.cpp \
-    src/vectorization/douglaspeucker.cpp
+    src/vectorization/douglaspeucker.cpp \
+    src/vectorization/iterative_linematching.cpp
 
 HEADERS += \
     include/opencvincludes.hpp \
     include/vec2icompare.hpp \
-    include/RTree.hpp \
     include/cairo/drm/cairo-drm-i915-private.h \
     include/cairo/drm/cairo-drm-i965-private.h \
     include/cairo/drm/cairo-drm-intel-brw-defines.h \
@@ -202,7 +202,8 @@ HEADERS += \
     include/vectorization/vectorize.hpp \
     include/vectorization/vectorline.hpp \
     include/vectorization/zhangsuen.hpp \
-    include/vectorization/douglaspeucker.h
+    include/vectorization/douglaspeucker.h \
+    include/vectorization/iterative_linematching.hpp
 
 INCLUDEPATH += "C:/opencv/build/include"
 

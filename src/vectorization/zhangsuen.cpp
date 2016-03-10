@@ -1,8 +1,12 @@
-#include "include/vectorization/zhangsuen.hpp"
-
 /**
- * Code for thinning a binary image using Zhang-Suen algorithm.
- */
+  * Implementation for thinning a binary image using
+  * Zhang-Suen's algorithm.
+  *
+  * Author:  Nash (nash@opencv-code.com)
+  * Website: http://opencv-code.com / https://github.com/bsdnoobz/zhang-suen-thinning/blob/master/thinning.cpp
+  */
+
+#include "include/vectorization/zhangsuen.hpp"
 
 using namespace cv;
 
